@@ -3,9 +3,10 @@
 // visitors never download it. The browser only falls back to its own copy
 // when this endpoint is unreachable.
 //
-// Abuse guards, cheapest first: same origin only, body cap, per IP throttle,
-// then a proof of work bound to the exact photo bytes and the hour, so a
-// flood pays real compute per request.
+// Abuse guards, cheapest first: same origin only (origin plus the browser's
+// own fetch signals), body cap, per IP throttle, then a proof of work bound
+// to the exact photo bytes and the hour, so a flood pays real compute per
+// request.
 import path from 'node:path'
 import sharp from 'sharp'
 import { pipeline, env, RawImage } from '@huggingface/transformers'
@@ -68,6 +69,18 @@ export default async function handler(req, res) {
   // Browsers always send Origin on our own page's fetches, so anything
   // without it is not the site talking.
   if ((req.headers.origin || '') !== ALLOWED_ORIGIN) {
+    res.status(403).json({ error: 'same origin only' })
+    return
+  }
+
+  // The browser's own signals: only our page can truthfully claim a
+  // same-origin fetch with a referer from the site. Scripts have to forge
+  // these by hand, and even then they still owe the proof of work below.
+  if ((req.headers['sec-fetch-site'] || '') !== 'same-origin') {
+    res.status(403).json({ error: 'same origin only' })
+    return
+  }
+  if (!String(req.headers.referer || '').startsWith(`${ALLOWED_ORIGIN}/`)) {
     res.status(403).json({ error: 'same origin only' })
     return
   }
