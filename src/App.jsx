@@ -680,6 +680,9 @@ export default function App() {
             default photo
           </button>
         ) : null}
+        <button type="button" className="ghost topbar-btn" onClick={reset}>
+          reset
+        </button>
       </header>
       <main className="main">
         <section className="stage" ref={stageRef}>
@@ -757,7 +760,6 @@ export default function App() {
         <Controls
           value={params}
           onChange={patch}
-          onReset={reset}
           onExport={exportPng}
           onExportVideo={exportVideo}
           onExportLoop={exportLoop}

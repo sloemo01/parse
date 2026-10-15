@@ -452,6 +452,41 @@ button.ghost.icon-btn svg {
   color: #9aa0a8;
 }
 
+.group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+.group-head:hover h2 {
+  color: #d5dae0;
+}
+
+.chev {
+  color: #6f757e;
+  transition: transform 140ms ease;
+}
+
+.group.closed .chev {
+  transform: rotate(-90deg);
+}
+
+.group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chips {
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+}
+
 .spacer {
   flex: 1;
 }

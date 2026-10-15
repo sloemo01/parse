@@ -11,6 +11,14 @@ export const PALETTES = [
   { id: 'citrus', name: 'citrus', stops: ['#06280f', '#3f8f1f', '#b3dc26', '#ffe24d', '#ff9f43'] },
   { id: 'candy', name: 'candy', stops: ['#2a0733', '#7a1d8f', '#e0449c', '#ff9e7d', '#ffe3a3'] },
   { id: 'steel', name: 'steel', stops: ['#05070d', '#1d2635', '#4a5a75', '#93a6c4', '#e8eef7'] },
+  { id: 'peach', name: 'peach', stops: ['#2b0d3a', '#8f2d56', '#e05a47', '#ffa45c', '#ffe8c2'] },
+  { id: 'forest', name: 'forest', stops: ['#04160e', '#0f4d2e', '#3f9c53', '#a8d96c', '#f4ffe0'] },
+  { id: 'riso', name: 'riso', stops: ['#0b1550', '#3d3dbb', '#ff4fa3', '#ff9ecb', '#fff0f7'] },
+  { id: 'dune', name: 'dune', stops: ['#191218', '#5c4433', '#c78d5a', '#f0d9a8', '#fff8e7'] },
+  { id: 'lagoon', name: 'lagoon', stops: ['#03142b', '#0b4d6b', '#29a5a5', '#8fe3c8', '#f0fff7'] },
+  { id: 'berry', name: 'berry', stops: ['#220b2e', '#6d1b52', '#c93f7a', '#ff8f9c', '#ffe3d0'] },
+  { id: 'lilac', name: 'lilac', stops: ['#0d0a1f', '#39306b', '#7a6bd6', '#c9c2ff', '#f4f0ff'] },
+  { id: 'lava', name: 'lava', stops: ['#0a0605', '#4d1410', '#b32d16', '#ff7a2f', '#ffe08a'] },
   { id: 'noir', name: 'noir', stops: ['#000000', '#ffffff'] },
 ]
 

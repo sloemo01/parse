@@ -17,7 +17,7 @@ A React + WebGL shader that recolors a photo with an After Effects Colorama styl
 - softness: how wide the transition edge is. sweep blur: a gentle blur that peaks halfway and cleans up at both ends, like the animated box blur in the tutorial. roll colors cycles the palette while the sweep runs.
 - ramp: cycles, phase, posterize steps, and a loop toggle that wraps the ramp.
 - dither: patterns the ramp just before the posterize step, so stacked colors break into ordered dots. bayer or noise, with amount and cell size. switching it on raises steps to 8 for the classic look.
-- palette: ten cycles with a hue shift on top. colorama is the default.
+- palette: eighteen color cycles with a hue shift on top, plus a shuffle button that picks a combo for you. colorama is the default.
 - motion: scrolls the ramp over time.
 - holding the photo or the pill under it shows the untouched original for as long as you hold.
 - open photo: loads any image at any size, or drop one straight on the canvas. oversized photos are scaled down to the gpu texture limit; a dropped photo gets its depth map estimated in the browser.
