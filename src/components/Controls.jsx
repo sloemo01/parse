@@ -101,7 +101,7 @@ export default function Controls({
   return (
     <aside className="panel-scroll flex w-[324px] flex-none flex-col gap-5 overflow-y-auto border-l border-border bg-card/25 p-4 max-[620px]:w-full max-[620px]:border-l-0 max-[620px]:border-t">
       <Section title="color">
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(86px,1fr))] gap-1.5">
+        <div id="tour-palettes" className="grid grid-cols-[repeat(auto-fill,minmax(86px,1fr))] gap-1.5">
           {PALETTES.map((p) => (
             <button
               key={p.id}
@@ -130,6 +130,7 @@ export default function Controls({
           ))}
         </div>
         <PSlider
+          id="tour-hueshift"
           label="hue shift"
           value={hueShift}
           min={-180}
@@ -139,6 +140,7 @@ export default function Controls({
           display={(v) => `${Math.round(v)} deg`}
         />
         <Button
+          id="tour-shuffle"
           variant="outline"
           size="sm"
           className="self-start"
@@ -150,7 +152,7 @@ export default function Controls({
           <Shuffle />
           shuffle
         </Button>
-        <Toggle label="photo tones" checked={photo} onChange={(v) => onChange({ photo: v })} />
+        <Toggle id="tour-phototones" label="photo tones" checked={photo} onChange={(v) => onChange({ photo: v })} />
         <Toggle
           id="tour-combine"
           label="combine with depth"
@@ -161,6 +163,7 @@ export default function Controls({
         <Hint>
           photo tones reads the colors from the picture itself, the way colorama does in{' '}
           <a
+            id="tour-tutorial"
             href="https://www.youtube.com/watch?v=JQ85g-OTy50"
             target="_blank"
             rel="noreferrer"
@@ -181,12 +184,15 @@ export default function Controls({
       </Section>
 
       <Section title="direction">
-        <DirectionPad value={dirIndex} onChange={(i) => onChange({ dirIndex: i })} />
-        <Toggle label="invert" checked={invert} onChange={(v) => onChange({ invert: v })} />
+        <div id="tour-dirpad">
+          <DirectionPad value={dirIndex} onChange={(i) => onChange({ dirIndex: i })} />
+        </div>
+        <Toggle id="tour-invert" label="invert" checked={invert} onChange={(v) => onChange({ invert: v })} />
       </Section>
 
       <Section title="reveal">
         <PSlider
+          id="tour-revealslider"
           label="reveal"
           value={wipe}
           min={0}
@@ -195,11 +201,12 @@ export default function Controls({
           onChange={(v) => onChange({ wipe: v })}
           display={pct}
         />
-        <Button variant="secondary" size="sm" className="self-start" onClick={onPlay}>
+        <Button id="tour-playsec" variant="secondary" size="sm" className="self-start" onClick={onPlay}>
           {playing ? <Square /> : <Play />}
           {playing ? 'stop' : 'play'}
         </Button>
         <PSlider
+          id="tour-wipesource"
           label="wipe source"
           value={wipeSource}
           min={0}
@@ -212,6 +219,7 @@ export default function Controls({
           }
         />
         <PSlider
+          id="tour-softness"
           label="softness"
           value={soft}
           min={0.02}
@@ -221,6 +229,7 @@ export default function Controls({
           display={pct}
         />
         <PSlider
+          id="tour-sweepblur"
           label="sweep blur"
           value={sweepBlur}
           min={0}
@@ -230,6 +239,7 @@ export default function Controls({
           display={pct}
         />
         <Toggle
+          id="tour-rollcolors"
           label="roll colors while sweeping"
           checked={rollColors}
           onChange={(v) => onChange({ rollColors: v })}
@@ -242,8 +252,9 @@ export default function Controls({
       </Section>
 
       <Section title="motion">
-        <Toggle label="animate" checked={animate} onChange={(v) => onChange({ animate: v })} />
+        <Toggle id="tour-animate" label="animate" checked={animate} onChange={(v) => onChange({ animate: v })} />
         <PSlider
+          id="tour-speed"
           label="speed"
           value={speed}
           min={0}
@@ -253,6 +264,7 @@ export default function Controls({
           display={(v) => v.toFixed(2)}
         />
         <PSlider
+          id="tour-looplength"
           label="loop length"
           value={loopSeconds}
           min={1}
@@ -273,6 +285,7 @@ export default function Controls({
 
       <Section title="effects" defaultOpen={false}>
         <PSlider
+          id="tour-cycles"
           label="cycles"
           value={repeat}
           min={1}
@@ -282,6 +295,7 @@ export default function Controls({
           display={(v) => `${v.toFixed(2)}x`}
         />
         <PSlider
+          id="tour-phase"
           label="phase"
           value={offset}
           min={-1}
@@ -291,6 +305,7 @@ export default function Controls({
           display={(v) => v.toFixed(2)}
         />
         <PSlider
+          id="tour-steps"
           label="steps"
           value={steps}
           min={1}
@@ -299,13 +314,15 @@ export default function Controls({
           onChange={(v) => onChange({ steps: v })}
           display={(v) => (v <= 1 ? 'smooth' : `${v}`)}
         />
-        <Toggle label="loop ramp" checked={wrap} onChange={(v) => onChange({ wrap: v })} />
+        <Toggle id="tour-loopramp" label="loop ramp" checked={wrap} onChange={(v) => onChange({ wrap: v })} />
         <Toggle
+          id="tour-dither"
           label="dither"
           checked={dither}
           onChange={(v) => onChange(v && steps <= 1 ? { dither: v, steps: 8 } : { dither: v })}
         />
         <PSlider
+          id="tour-ditheramount"
           label="dither amount"
           value={ditherStrength}
           min={0}
@@ -315,6 +332,7 @@ export default function Controls({
           display={pct}
         />
         <PSlider
+          id="tour-dithersize"
           label="dither size"
           value={ditherSize}
           min={1}
@@ -323,7 +341,7 @@ export default function Controls({
           onChange={(v) => onChange({ ditherSize: v })}
           display={(v) => `${Math.round(v)} px`}
         />
-        <div className="flex gap-1.5">
+        <div id="tour-ditherstyle" className="flex gap-1.5">
           <Button
             variant={ditherStyle === 0 ? 'secondary' : 'outline'}
             size="sm"
@@ -347,6 +365,7 @@ export default function Controls({
 
       <Section title="depth" open={depthOpen} onOpenChange={setDepthOpen}>
         <Toggle
+          id="tour-usedepth"
           label="use depth map"
           checked={depthOn !== false}
           onChange={(v) => onChange({ depthOn: v })}
@@ -363,6 +382,7 @@ export default function Controls({
           disabled={depthOn === false}
         />
         <Toggle
+          id="tour-viewdepth"
           label="view depth"
           checked={viewDepth}
           onChange={(v) => onChange({ viewDepth: v })}
@@ -370,6 +390,7 @@ export default function Controls({
         />
         <div className="flex flex-wrap gap-1.5">
           <Button
+            id="tour-aidepth"
             variant="outline"
             size="sm"
             onClick={onAIDepth}
@@ -378,7 +399,7 @@ export default function Controls({
           >
             {aiBusy ? 'ai depth...' : 'ai depth'}
           </Button>
-          <Button variant="outline" size="sm" onClick={onSaveDepth} disabled={depthOn === false}>
+          <Button id="tour-savemap" variant="outline" size="sm" onClick={onSaveDepth} disabled={depthOn === false}>
             save map
           </Button>
         </div>
@@ -390,6 +411,7 @@ export default function Controls({
 
       <Section title="output">
         <PSlider
+          id="tour-blend"
           label="blend"
           value={blend}
           min={0}
@@ -399,10 +421,11 @@ export default function Controls({
           display={pct}
         />
         <div className="flex flex-wrap gap-1.5">
-          <Button size="sm" onClick={onExport}>
+          <Button id="tour-exportpng" size="sm" onClick={onExport}>
             export png
           </Button>
           <Button
+            id="tour-exportvideo"
             variant="outline"
             size="sm"
             onClick={onExportVideo}
@@ -412,6 +435,7 @@ export default function Controls({
             {recording ? 'recording...' : 'export video'}
           </Button>
           <Button
+            id="tour-exportloop"
             variant="outline"
             size="sm"
             onClick={onExportLoop}

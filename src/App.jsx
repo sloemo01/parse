@@ -750,6 +750,7 @@ export default function App() {
           </Button>
         ) : null}
         <Button
+          id="tour-start"
           variant="outline"
           size="sm"
           onClick={() => setTourOpen(true)}
@@ -802,6 +803,7 @@ export default function App() {
           {status === 'ready' && (
             <div id="tour-transport" className="flex shrink-0 items-center justify-center gap-2 px-4 pb-4">
               <Button
+                id="tour-playmain"
                 variant="secondary"
                 size="sm"
                 onClick={startPlayback}
@@ -811,6 +813,7 @@ export default function App() {
                 {playing ? 'stop' : 'play'}
               </Button>
               <Button
+                id="tour-hold"
                 variant="secondary"
                 size="sm"
                 title="hold to see the original"
