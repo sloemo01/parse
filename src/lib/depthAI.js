@@ -1,8 +1,8 @@
 // Depth Anything V2 (small) running fully in the browser through
-// transformers.js. The library and the model weights come from public CDNs on
-// first use and are dropped from the browser cache again when the page goes
-// away, so a visit leaves nothing behind. WebGPU is used where it exists,
-// wasm otherwise.
+// transformers.js. The library and the quantized weights (about 26 MB) come
+// from public CDNs on first use and stay in the browser cache, so each
+// visitor downloads them once ever. WebGPU is used where it exists, wasm
+// otherwise.
 
 const CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3/+esm'
 
@@ -16,13 +16,14 @@ function loadLib() {
   return libPromise
 }
 
-// Each rung is tried until one loads: the GPU with half precision weights,
-// then quantized weights on the GPU, then quantized on wasm, then whatever
-// the default is. Missing weight files or an unwilling GPU just move on.
+// Each rung is tried until one loads. The quantized weights (about 26 MB)
+// are the default on both the GPU and wasm; half precision only shows up as
+// a fallback if the quantized file refuses to load. Missing weight files or
+// an unwilling GPU just move on.
 const LADDER = [
-  ['webgpu', 'fp16'],
   ['webgpu', 'q8'],
   ['wasm', 'q8'],
+  ['webgpu', 'fp16'],
   ['wasm', ''],
 ]
 

@@ -30,11 +30,11 @@ src/assets/depth.png is a real monocular depth estimate of the photo, produced o
 
     npm run depth
 
-The script runs the model over the photo, stretches the contrast, and writes a grayscale PNG that the app bundles. The same model family also runs live in the browser (Depth Anything V2 small through transformers.js, WebGPU first with a wasm fallback): photos you open or drop get refined by it automatically, and the ai depth button runs it on whatever is loaded. The browser copy of the weights is session only: they are deleted again when you leave the page, so nothing stays on disk after a visit; a fresh visit downloads them once. The shader only reads a grayscale texture, so any depth estimate drops in the same way.
+The script runs the model over the photo, stretches the contrast, and writes a grayscale PNG that the app bundles. The same model family also runs live in the browser (Depth Anything V2 small through transformers.js, WebGPU first with a wasm fallback): photos you open or drop get refined by it automatically, and the ai depth button runs it on whatever is loaded. The browser weights are the quantized q8 build, about 26 MB, and they stay in the browser cache, so each visitor downloads them once ever and later visits start instantly. The shader only reads a grayscale texture, so any depth estimate drops in the same way.
 
 ## deploy
 
-The repo is private on GitHub (sloemo01/parse) and deploys to Vercel as a static Vite site at https://parse-sloemos-projects.vercel.app. Everything runs client side: no servers, no functions, and the depth model only downloads when someone actually asks for it.
+The repo is private on GitHub (sloemo01/parse) and deploys to Vercel as a static Vite site at https://parse-sloemos-projects.vercel.app. Everything runs client side: no servers, no functions. The depth model only downloads when someone opens a photo or asks for it, and then stays in that visitor's browser cache.
 
 ## notes
 

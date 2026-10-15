@@ -4,7 +4,7 @@ import depthSrc from './assets/depth.png'
 import depthSoftSrc from './assets/depth-soft.png'
 import { createRenderer } from './gl/renderer.js'
 import { PALETTES, buildLut } from './lib/palettes.js'
-import { buildDepthPair, buildDepthSoft, clearDepthCache } from './lib/depth.js'
+import { buildDepthPair, buildDepthSoft } from './lib/depth.js'
 import { runAIDepth } from './lib/depthAI.js'
 import Controls from './components/Controls.jsx'
 import { DIR_VECTORS } from './components/DirectionPad.jsx'
@@ -284,15 +284,6 @@ export default function App() {
       window.removeEventListener('blur', end)
     }
   }, [revealing])
-
-  // The cached model weights are session only: leaving the page removes them
-  // from disk, so nothing is left behind. Switching tabs keeps them, a fresh
-  // visit downloads them once again.
-  useEffect(() => {
-    const drop = () => clearDepthCache()
-    window.addEventListener('pagehide', drop)
-    return () => window.removeEventListener('pagehide', drop)
-  }, [])
 
   // Load the photo and the depth map, spin up the renderer. The depth map is
   // generated offline (npm run depth); if it is missing the app falls back to
