@@ -8,8 +8,11 @@ import { Switch } from './ui/switch.jsx'
 import { PALETTES, paletteCss } from '../lib/palettes.js'
 import { cn } from '../lib/utils.js'
 
-function Section({ title, children, defaultOpen = true }) {
-  const [open, setOpen] = useState(defaultOpen)
+function Section({ title, children, defaultOpen = true, open: controlledOpen, onOpenChange }) {
+  const [uncontrolled, setUncontrolled] = useState(defaultOpen)
+  const controlled = controlledOpen !== undefined
+  const open = controlled ? controlledOpen : uncontrolled
+  const setOpen = controlled ? onOpenChange : setUncontrolled
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="flex flex-col">
       <CollapsibleTrigger className="group flex w-full items-center justify-between text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground transition-colors hover:text-foreground">
@@ -23,9 +26,9 @@ function Section({ title, children, defaultOpen = true }) {
   )
 }
 
-function PSlider({ label, value, min, max, step, onChange, display, disabled }) {
+function PSlider({ label, value, min, max, step, onChange, display, disabled, id }) {
   return (
-    <div className={cn('flex flex-col gap-1.5', disabled && 'opacity-50')}>
+    <div id={id} className={cn('flex flex-col gap-1.5', disabled && 'opacity-50')}>
       <div className="flex items-baseline justify-between">
         <span className="text-xs text-foreground/85">{label}</span>
         <span className="text-[11px] tabular-nums text-muted-foreground">{display ? display(value) : value}</span>
@@ -79,6 +82,17 @@ export default function Controls({
     repeat, wrap, offset, steps, blend, paletteId, hueShift, animate, speed, viewDepth,
     dither, ditherStrength, ditherSize, ditherStyle, loopSeconds,
   } = value
+
+  // Opens the depth section and brings the depth mix row into view. The
+  // section animates open in 0.18s, so the scroll waits for it to settle.
+  const [depthOpen, setDepthOpen] = useState(false)
+  const jumpToDepthMix = () => {
+    setDepthOpen(true)
+    setTimeout(() => {
+      const el = document.getElementById('depth-mix')
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 260)
+  }
 
   return (
     <aside className="panel-scroll flex w-[324px] flex-none flex-col gap-5 overflow-y-auto border-l border-border bg-card/25 p-4 max-[620px]:w-full max-[620px]:border-l-0 max-[620px]:border-t">
@@ -149,8 +163,15 @@ export default function Controls({
           >
             the tutorial
           </a>
-          . otherwise the ramp comes from the direction or the depth map. combine with depth blends the two, and the
-          depth mix slider then sets how much of the ramp comes from the map versus the photo's tones.
+          . otherwise the ramp comes from the direction or the depth map. combine with depth blends the two, and{' '}
+          <button
+            type="button"
+            onClick={jumpToDepthMix}
+            className="text-foreground/90 underline underline-offset-2 transition-colors hover:text-foreground"
+          >
+            the depth mix slider
+          </button>{' '}
+          then sets how much of the ramp comes from the map versus the photo's tones.
         </Hint>
       </Section>
 
@@ -319,13 +340,14 @@ export default function Controls({
         </Hint>
       </Section>
 
-      <Section title="depth" defaultOpen={false}>
+      <Section title="depth" open={depthOpen} onOpenChange={setDepthOpen}>
         <Toggle
           label="use depth map"
           checked={depthOn !== false}
           onChange={(v) => onChange({ depthOn: v })}
         />
         <PSlider
+          id="depth-mix"
           label="depth mix"
           value={depthMix}
           min={0}
