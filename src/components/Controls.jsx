@@ -15,7 +15,10 @@ function Section({ title, children, defaultOpen = true, open: controlledOpen, on
   const setOpen = controlled ? onOpenChange : setUncontrolled
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="flex flex-col">
-      <CollapsibleTrigger className="group flex w-full items-center justify-between text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground transition-colors hover:text-foreground">
+      <CollapsibleTrigger
+        id={`sec-${title}`}
+        className="group flex w-full items-center justify-between text-[11px] font-semibold uppercase tracking-[0.09em] text-muted-foreground transition-colors hover:text-foreground"
+      >
         <span>{title}</span>
         <ChevronDown className="size-3.5 transition-transform group-data-[state=closed]:-rotate-90" />
       </CollapsibleTrigger>
@@ -45,9 +48,10 @@ function PSlider({ label, value, min, max, step, onChange, display, disabled, id
   )
 }
 
-function Toggle({ label, checked, onChange, disabled }) {
+function Toggle({ label, checked, onChange, disabled, id }) {
   return (
     <label
+      id={id}
       className={cn(
         'flex items-center justify-between gap-3',
         disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
@@ -148,6 +152,7 @@ export default function Controls({
         </Button>
         <Toggle label="photo tones" checked={photo} onChange={(v) => onChange({ photo: v })} />
         <Toggle
+          id="tour-combine"
           label="combine with depth"
           checked={combineDepth}
           onChange={(v) => onChange({ combineDepth: v })}

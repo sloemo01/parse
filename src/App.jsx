@@ -7,8 +7,9 @@ import { PALETTES, buildLut } from './lib/palettes.js'
 import { buildDepthPair, buildDepthSoft } from './lib/depth.js'
 import { runAIDepth } from './lib/depthAI.js'
 import { encodeWebCodecs } from './lib/videoExport.js'
-import { Play, Square, Eye } from 'lucide-react'
+import { Play, Square, Eye, Compass } from 'lucide-react'
 import Controls from './components/Controls.jsx'
+import Tour from './components/Tour.jsx'
 import { Button } from './components/ui/button.jsx'
 import { DIR_VECTORS } from './components/DirectionPad.jsx'
 
@@ -113,6 +114,7 @@ export default function App() {
   const [customPhoto, setCustomPhoto] = useState(false)
   const [recording, setRecording] = useState(false)
   const [aiBusy, setAiBusy] = useState('')
+  const [tourOpen, setTourOpen] = useState(false)
 
   const stageRef = useRef(null)
   const canvasRef = useRef(null)
@@ -711,7 +713,7 @@ export default function App() {
       onDrop={onDrop}
     >
       <header className="flex items-center gap-3 border-b border-border px-4 py-2.5">
-        <h1 className="text-sm font-semibold tracking-tight">parse</h1>
+        <h1 id="tour-brand" className="text-sm font-semibold tracking-tight">parse</h1>
         <span className="text-xs text-muted-foreground">depth gradient colorama</span>
         {notice ? <span className="text-xs text-destructive">{notice}</span> : null}
         {aiBusy ? <span className="text-xs text-muted-foreground">{aiBusy}</span> : null}
@@ -727,7 +729,12 @@ export default function App() {
             e.target.value = ''
           }}
         />
-        <Button variant="outline" size="sm" onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+        <Button
+          id="tour-open-photo"
+          variant="outline"
+          size="sm"
+          onClick={() => fileInputRef.current && fileInputRef.current.click()}
+        >
           open photo
         </Button>
         {customPhoto ? (
@@ -742,7 +749,16 @@ export default function App() {
             default photo
           </Button>
         ) : null}
-        <Button variant="ghost" size="sm" onClick={reset}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setTourOpen(true)}
+          title="a walkthrough of every control"
+        >
+          <Compass />
+          tour
+        </Button>
+        <Button id="tour-reset" variant="ghost" size="sm" onClick={reset}>
           reset
         </Button>
       </header>
@@ -753,6 +769,7 @@ export default function App() {
             ref={stageRef}
           >
             <canvas
+              id="tour-stage"
               ref={canvasRef}
               className="block rounded-xl bg-black shadow-2xl"
               onPointerDown={() => setReveal(true)}
@@ -783,7 +800,7 @@ export default function App() {
             )}
           </div>
           {status === 'ready' && (
-            <div className="flex shrink-0 items-center justify-center gap-2 px-4 pb-4">
+            <div id="tour-transport" className="flex shrink-0 items-center justify-center gap-2 px-4 pb-4">
               <Button
                 variant="secondary"
                 size="sm"
@@ -829,6 +846,7 @@ export default function App() {
           playing={playing}
         />
       </main>
+      <Tour open={tourOpen} onClose={() => setTourOpen(false)} />
     </div>
   )
 }

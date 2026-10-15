@@ -21,6 +21,7 @@ A React + WebGL shader that recolors a photo with an After Effects Colorama styl
 - motion: scrolls the ramp over time.
 - holding the photo or the pill under it shows the untouched original for as long as you hold.
 - open photo: loads any image at any size, or drop one straight on the canvas. oversized photos are scaled down to the gpu texture limit; a dropped photo gets its depth map estimated in the browser.
+- tour: the button in the top bar spotlights every control in order, panel and stage alike, one step at a time.
 - export png renders at the photo's full size. save map writes the grayscale texture the shader feeds on.
 - export video records the sweep as a video (up to 1920px on the long side). the browser's own recorder captures the canvas in real time, so the clip takes about 3 seconds to render and shows the animation plus a short hold on the revealed photo.
 - export loop records the animate cycle for a whole number of palette rounds, so the clip repeats without a seam. the loop length slider in the motion section sets roughly how long it runs.
