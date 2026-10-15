@@ -1,7 +1,8 @@
 // Depth Anything V2 (small) running fully in the browser through
 // transformers.js. The library and the model weights come from public CDNs on
-// first use; the browser caches them afterwards. WebGPU is used where it
-// exists, wasm otherwise.
+// first use and are dropped from the browser cache again when the page goes
+// away, so a visit leaves nothing behind. WebGPU is used where it exists,
+// wasm otherwise.
 
 const CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3/+esm'
 

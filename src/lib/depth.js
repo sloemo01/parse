@@ -127,3 +127,16 @@ export function buildDepthPair(img) {
   const depth = buildDepthMap(img)
   return { depth, soft: buildDepthSoft(depth) }
 }
+
+// The model cache is session only: clearing this removes the weights from the
+// browser cache so nothing stays on disk after a visit. The next visit simply
+// downloads them once again.
+export function clearDepthCache() {
+  try {
+    if (typeof caches === 'undefined') return
+    const job = caches.delete('transformers-cache')
+    if (job && job.catch) job.catch(() => {})
+  } catch (err) {
+    // nothing to clean up
+  }
+}
