@@ -262,15 +262,19 @@ const CARD_H = 230
 export default function Tour({ open, onClose }) {
   const [step, setStep] = useState(0)
   const [rect, setRect] = useState(null)
+  const [inPanel, setInPanel] = useState(false)
   const s = STEPS[step]
 
   const measure = useCallback((anchor) => {
     const el = anchor ? document.querySelector(anchor) : null
     if (!el) {
       setRect(null)
+      setInPanel(false)
       return
     }
     setRect(el.getBoundingClientRect())
+    const panel = document.getElementById('tour-panel')
+    setInPanel(!!(panel && panel.contains(el)))
   }, [])
 
   // Fresh tour on every open.
@@ -325,15 +329,21 @@ export default function Tour({ open, onClose }) {
 
   if (!open) return null
 
-  // The card sits just left of the control panel, its right edge snug to the
-  // panel border, vertically centered on the spotlit target. The panel stays
-  // fully visible, and the card reads as part of the panel it is explaining.
+  // Placement: targets inside the right control panel get the card parked on
+  // the left of the panel, vertically aligned with the target, so the panel
+  // stays fully visible. Anything on the stage or the top bar gets the card
+  // right next to it, a moving tooltip that follows the spotlight.
+  const vw = window.innerWidth
   const vh = window.innerHeight
   const panelEl = document.getElementById('tour-panel')
   const panelRect = panelEl ? panelEl.getBoundingClientRect() : null
-  const cardLeft = panelRect ? Math.max(12, panelRect.left - CARD_W - 14) : 20
+  let cardLeft = panelRect ? Math.max(12, panelRect.left - CARD_W - 14) : 20
   let cardTop = Math.max(16, vh / 2 - CARD_H / 2)
-  if (rect) {
+  if (rect && !inPanel) {
+    cardLeft = Math.max(12, Math.min(vw - CARD_W - 12, rect.left + rect.width / 2 - CARD_W / 2))
+    cardTop = rect.bottom + 16
+    if (cardTop + CARD_H > vh - 12) cardTop = Math.max(12, rect.top - CARD_H - 16)
+  } else if (rect) {
     cardTop = Math.max(16, Math.min(vh - CARD_H - 16, rect.top + rect.height / 2 - CARD_H / 2))
   }
 
@@ -353,7 +363,7 @@ export default function Tour({ open, onClose }) {
         />
       )}
       <div
-        className="absolute rounded-xl border border-border bg-card p-4 shadow-2xl transition-[top] duration-150"
+        className="absolute rounded-xl border border-border bg-card p-4 shadow-2xl transition-[left,top] duration-150"
         style={{ left: cardLeft, top: cardTop, width: CARD_W }}
       >
         <div className="mb-1 flex items-baseline justify-between gap-3">
