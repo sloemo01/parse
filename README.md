@@ -34,7 +34,7 @@ The script runs the model over the photo, stretches the contrast, and writes a g
 
 ## deploy
 
-The repo is private on GitHub and deploys to Vercel as a static Vite site. Everything runs client side: no servers, no functions, and the depth model only downloads when someone actually asks for it.
+The repo is private on GitHub (sloemo01/parse) and deploys to Vercel as a static Vite site at https://parse-sloemos-projects.vercel.app. Everything runs client side: no servers, no functions, and the depth model only downloads when someone actually asks for it.
 
 ## notes
 
