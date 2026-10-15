@@ -20,9 +20,9 @@ env.cacheDir = '/tmp'
 const MODEL_ID = 'onnx-community/depth-anything-v2-small'
 const MAX_SIDE = 768
 const ALLOWED_ORIGIN = 'https://parse-sloemos-projects.vercel.app'
-const MAX_BODY = 6 * 1024 * 1024
+const MAX_BODY = 10 * 1024 * 1024
 const WINDOW_MS = 10 * 60 * 1000
-const MAX_RUNS = 10
+const MAX_RUNS = 15
 
 let pipePromise = null
 
