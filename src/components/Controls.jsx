@@ -99,7 +99,10 @@ export default function Controls({
   }
 
   return (
-    <aside className="panel-scroll flex w-[324px] flex-none flex-col gap-5 overflow-y-auto border-l border-border bg-card/25 p-4 max-[620px]:w-full max-[620px]:border-l-0 max-[620px]:border-t">
+    <aside
+      id="tour-panel"
+      className="panel-scroll flex w-[324px] flex-none flex-col gap-5 overflow-y-auto border-l border-border bg-card/25 p-4 max-[620px]:w-full max-[620px]:border-l-0 max-[620px]:border-t"
+    >
       <Section title="color">
         <div id="tour-palettes" className="grid grid-cols-[repeat(auto-fill,minmax(86px,1fr))] gap-1.5">
           {PALETTES.map((p) => (

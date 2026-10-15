@@ -257,6 +257,7 @@ const STEPS = [
 ]
 
 const CARD_W = 330
+const CARD_H = 230
 
 export default function Tour({ open, onClose }) {
   const [step, setStep] = useState(0)
@@ -324,6 +325,18 @@ export default function Tour({ open, onClose }) {
 
   if (!open) return null
 
+  // The card sits just left of the control panel, its right edge snug to the
+  // panel border, vertically centered on the spotlit target. The panel stays
+  // fully visible, and the card reads as part of the panel it is explaining.
+  const vh = window.innerHeight
+  const panelEl = document.getElementById('tour-panel')
+  const panelRect = panelEl ? panelEl.getBoundingClientRect() : null
+  const cardLeft = panelRect ? Math.max(12, panelRect.left - CARD_W - 14) : 20
+  let cardTop = Math.max(16, vh / 2 - CARD_H / 2)
+  if (rect) {
+    cardTop = Math.max(16, Math.min(vh - CARD_H - 16, rect.top + rect.height / 2 - CARD_H / 2))
+  }
+
   return (
     <div className="fixed inset-0 z-[90]">
       <div className="absolute inset-0" onClick={onClose} />
@@ -339,11 +352,9 @@ export default function Tour({ open, onClose }) {
           }}
         />
       )}
-      {/* Docked left, vertically centered with the margin auto trick, so the
-          card never moves between steps. */}
       <div
-        className="absolute rounded-xl border border-border bg-card p-4 shadow-2xl"
-        style={{ left: 20, top: 0, bottom: 0, margin: 'auto', width: CARD_W, height: 'fit-content' }}
+        className="absolute rounded-xl border border-border bg-card p-4 shadow-2xl transition-[top] duration-150"
+        style={{ left: cardLeft, top: cardTop, width: CARD_W }}
       >
         <div className="mb-1 flex items-baseline justify-between gap-3">
           <span className="text-sm font-semibold">{s.title}</span>
