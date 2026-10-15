@@ -12,7 +12,7 @@ A React + WebGL shader that recolors a photo with an After Effects Colorama styl
 ## controls
 
 - direction: eight ramp axes plus a radial mode. invert flips the ramp and the reveal order.
-- depth mix: 0 keeps the ramp positional, 1 reads it entirely from the depth map. photo tones reads the ramp from the photo itself instead, the way colorama does in the tutorial. the use depth map switch turns depth off: the ramp and the reveal then run on tone, position, and direction alone, and no depth pass or server call happens.
+- depth mix: 0 keeps the ramp positional, 1 reads it entirely from the depth map. photo tones reads the ramp from the photo itself instead, the way colorama does in the tutorial; combine with depth blends the two and lets the depth mix slider share the ramp between the tones and the map. the use depth map switch turns depth off: the ramp and the reveal then run on tone, position, and direction alone, and no depth pass or server call happens.
 - reveal: the gradient wipe. the front runs through the chosen direction by default, blooming out of the middle on the center dot, revealing the original underneath; slide wipe source toward the depth map for a wipe that follows the scene's depth instead. play runs the sweep, the slider scrubs it.
 - softness: how wide the transition edge is. sweep blur: a gentle blur that peaks halfway and cleans up at both ends, like the animated box blur in the tutorial. roll colors cycles the palette while the sweep runs.
 - ramp: cycles, phase, posterize steps, and a loop toggle that wraps the ramp.
@@ -39,6 +39,6 @@ The repo is private on GitHub (sloemo01/parse) and deploys to Vercel as a static
 
 ## notes
 
-- The built file accepts query params for deep linking a state, for example ?wipe=0.5&wipesource=0&palette=neon. add depthmap=0 to land with the depth map switched off.
+- The built file accepts query params for deep linking a state, for example ?wipe=0.5&wipesource=0&palette=neon. add depthmap=0 to land with the depth map switched off, or combine=1 for the tones and depth blend on.
 - The bundled photo is resized to 1600 x 2400 to keep the single file build light. Replace the file in src/assets and the shader picks up the new size on its own.
 - photo: Kaplan Art on Pexels.

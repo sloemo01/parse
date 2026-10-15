@@ -17,6 +17,7 @@ const DEFAULTS = {
   invert: false,
   depthMix: 0.75,
   depthOn: true,
+  combineDepth: false,
   photo: true,
   wipe: 0,
   wipeSource: 0,
@@ -56,6 +57,7 @@ function initialParams() {
   num('blur', 0, 1, (v) => (out.sweepBlur = v))
   num('depth', 0, 1, (v) => (out.depthMix = v))
   if (q.get('depthmap') === '0') out.depthOn = false
+  if (q.get('combine') === '1') out.combineDepth = true
   num('blend', 0, 1, (v) => (out.blend = v))
   num('dir', 0, 8, (v) => (out.dirIndex = Math.round(v)))
   const pal = q.get('palette')
@@ -79,6 +81,7 @@ function uniformState(s, time, original) {
     radial: s.dirIndex === 4 ? 1 : 0,
     invert: s.invert ? 1 : 0,
     depthMix: s.depthOn === false ? 0 : s.depthMix,
+    combine: s.depthOn === false ? 0 : s.combineDepth ? 1 : 0,
     photo: s.photo ? 1 : 0,
     wipe: s.wipe,
     wipeDepth: s.depthOn === false ? 0 : s.wipeSource,

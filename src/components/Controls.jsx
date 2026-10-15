@@ -75,7 +75,7 @@ export default function Controls({
 }) {
   const pct = (v) => `${Math.round(v * 100)}%`
   const {
-    dirIndex, invert, depthMix, depthOn, photo, wipe, wipeSource, soft, sweepBlur, rollColors,
+    dirIndex, invert, depthMix, depthOn, photo, combineDepth, wipe, wipeSource, soft, sweepBlur, rollColors,
     repeat, wrap, offset, steps, blend, paletteId, hueShift, animate, speed, viewDepth,
     dither, ditherStrength, ditherSize, ditherStyle, loopSeconds,
   } = value
@@ -133,9 +133,16 @@ export default function Controls({
           shuffle
         </Button>
         <Toggle label="photo tones" checked={photo} onChange={(v) => onChange({ photo: v })} />
+        <Toggle
+          label="combine with depth"
+          checked={combineDepth}
+          onChange={(v) => onChange({ combineDepth: v })}
+          disabled={depthOn === false}
+        />
         <Hint>
           photo tones reads the colors from the picture itself, the way colorama does in the tutorial. otherwise the
-          ramp comes from the direction or the depth map.
+          ramp comes from the direction or the depth map. combine with depth blends the two, and the depth mix
+          slider then sets how much of the ramp comes from the map versus the photo's tones.
         </Hint>
       </Section>
 

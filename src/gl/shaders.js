@@ -25,6 +25,7 @@ uniform float uRadial;
 uniform float uInvert;
 uniform float uDepthMix;
 uniform float uPhoto;
+uniform float uCombine;
 uniform float uRoll;
 uniform float uRepeat;
 uniform float uWrap;
@@ -99,7 +100,11 @@ void main() {
   // photo's own tones (a gradient map, the way colorama reads the image).
   float v = mix(t, depth, uDepthMix);
   float lum = dot(img, vec3(0.2126, 0.7152, 0.0722));
-  v = mix(v, lum, uPhoto);
+  // Photo tones read the ramp from the image itself. The combine mode blends
+  // those tones with the depth map instead of letting the tones override
+  // everything, at the depth mix amount.
+  float photoV = mix(lum, depth, uDepthMix * uCombine);
+  v = mix(v, photoV, uPhoto);
   v = mix(v, 1.0 - v, uInvert);
 
   v = v * uRepeat + uOffset;
