@@ -50,12 +50,12 @@ function Toggle({ label, checked, onChange }) {
   )
 }
 
-export default function Controls({ value, onChange, onReset, onExport, onExportVideo, recording, onSaveDepth, onAIDepth, aiBusy, onPlay, playing }) {
+export default function Controls({ value, onChange, onReset, onExport, onExportVideo, onExportLoop, recording, onSaveDepth, onAIDepth, aiBusy, onPlay, playing }) {
   const pct = (v) => `${Math.round(v * 100)}%`
   const {
     dirIndex, invert, depthMix, photo, wipe, wipeSource, soft, sweepBlur, rollColors,
     repeat, wrap, offset, steps, blend, paletteId, hueShift, animate, speed, viewDepth,
-    dither, ditherStrength, ditherSize, ditherStyle,
+    dither, ditherStrength, ditherSize, ditherStyle, loopSeconds,
   } = value
 
   return (
@@ -272,6 +272,23 @@ export default function Controls({ value, onChange, onReset, onExport, onExportV
           onChange={(v) => onChange({ speed: v })}
           display={(v) => v.toFixed(2)}
         />
+        <Slider
+          label="loop length"
+          value={loopSeconds}
+          min={1}
+          max={12}
+          step={1}
+          onChange={(v) => onChange({ loopSeconds: v })}
+          display={(v) => {
+            const speedNow = Math.max(0.02, speed)
+            const cycles = Math.max(1, Math.round(v * speedNow))
+            return `${(cycles / speedNow).toFixed(1)}s`
+          }}
+        />
+        <p className="hint">
+          export loop records the animate cycle for a whole number of rounds, so the clip repeats without a seam. this
+          slider sets how long it runs.
+        </p>
       </section>
 
       <section className="group">
@@ -294,9 +311,18 @@ export default function Controls({ value, onChange, onReset, onExport, onExportV
             className="ghost"
             onClick={onExportVideo}
             disabled={recording}
-            title="records the sweep as a webm video"
+            title="records the sweep as a video"
           >
             {recording ? 'recording...' : 'export video'}
+          </button>
+          <button
+            type="button"
+            className="ghost"
+            onClick={onExportLoop}
+            disabled={recording}
+            title="records the animate cycle as a seamless looping clip"
+          >
+            {recording ? 'recording...' : 'export loop'}
           </button>
           <button type="button" className="ghost" onClick={onReset}>
             reset

@@ -33,6 +33,7 @@ const DEFAULTS = {
   ditherStrength: 0.6,
   ditherSize: 3,
   ditherStyle: 0,
+  loopSeconds: 3,
 }
 
 // State can be deep linked with query params on the built file, for example
@@ -61,6 +62,7 @@ function initialParams() {
   num('ditherstrength', 0, 1, (v) => (out.ditherStrength = v))
   num('dithersize', 1, 10, (v) => (out.ditherSize = Math.round(v)))
   num('ditherstyle', 0, 1, (v) => (out.ditherStyle = Math.round(v)))
+  num('loop', 1, 12, (v) => (out.loopSeconds = Math.round(v)))
   return out
 }
 
@@ -486,10 +488,11 @@ export default function App() {
     }, 'image/png')
   }
 
-  // Records the same sweep the play button runs, at a capped resolution, and
-  // saves it as a webm. MediaRecorder captures the canvas in real time, so
-  // this plays the animation through once while it records.
-  const exportVideo = async () => {
+  // Shared recorder: runs drawFrame(t seconds, { renderer, w, h }) for
+  // `duration` while MediaRecorder captures the canvas, then saves the clip.
+  // Prefer the platform encoder (h264 in mp4) which stays real time on every
+  // machine; webm is the fallback where mp4 recording is missing.
+  const recordVideo = async ({ duration, filename, drawFrame }) => {
     const renderer = rendererRef.current
     const img = imageRef.current
     const canvas = canvasRef.current
@@ -506,14 +509,12 @@ export default function App() {
     const srcH = img.naturalHeight || img.height
     const cap = 1920
     const scale = Math.min(1, cap / Math.max(srcW, srcH))
-    const vw = Math.max(2, 2 * Math.round((srcW * scale) / 2))
-    const vh = Math.max(2, 2 * Math.round((srcH * scale) / 2))
+    const w = Math.max(2, 2 * Math.round((srcW * scale) / 2))
+    const h = Math.max(2, 2 * Math.round((srcH * scale) / 2))
 
     recordRef.current.active = true
     setRecording(true)
 
-    // Prefer the platform encoder (h264 in mp4) which stays real time on
-    // every machine; webm is the fallback where mp4 recording is missing.
     const mime =
       [
         'video/mp4;codecs=avc1.42E01E',
@@ -545,30 +546,21 @@ export default function App() {
       recorder.onstop = resolve
       recorder.onerror = resolve
     })
-
-    const s = paramsRef.current
-    const rollStart = timeRef.current
-    const sweep = 0.6 + 1.6
-    const hold = 0.6
-    const total = sweep + hold
     // Wall clock failsafe: if rAF gets throttled while the tab is hidden the
     // frame loop can stall, so a timer ends the recording no matter what.
     const failsafe = setTimeout(() => {
       if (recorder.state === 'recording') recorder.stop()
-    }, total * 1000 + 1500)
+    }, duration * 1000 + 1500)
 
-    // First frame at full reveal-off so the clip starts clean.
-    renderer.render(uniformState({ ...s, wipe: 0 }, rollStart, false), vw, vh)
+    // First frame before the recorder starts so the clip opens clean.
+    drawFrame(0, { renderer, w, h })
     recorder.start(250)
     const t0 = performance.now()
     let raf = 0
     const frame = (now) => {
       const t = (now - t0) / 1000
-      const p = Math.min(1, t / sweep)
-      const eased = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2
-      const roll = rollStart + (s.rollColors ? 2.0 * p : 0)
-      renderer.render(uniformState({ ...s, wipe: eased }, roll, false), vw, vh)
-      if (t < total) raf = requestAnimationFrame(frame)
+      drawFrame(Math.min(t, duration), { renderer, w, h })
+      if (t < duration) raf = requestAnimationFrame(frame)
       else recorder.stop()
     }
     raf = requestAnimationFrame(frame)
@@ -587,7 +579,7 @@ export default function App() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `parse-video.${ext}`
+      a.download = `${filename}.${ext}`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -595,6 +587,37 @@ export default function App() {
     } else {
       setNotice('the recorder came back empty')
     }
+  }
+
+  // The sweep the play button runs, recorded end to end.
+  const exportVideo = () =>
+    recordVideo({
+      duration: 0.6 + 1.6 + 0.6,
+      filename: 'parse-video',
+      drawFrame: (t, { renderer, w, h }) => {
+        const s = paramsRef.current
+        const sweep = 0.6 + 1.6
+        const p = Math.min(1, t / sweep)
+        const eased = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2
+        const roll = timeRef.current + (s.rollColors ? 2.0 * p : 0)
+        renderer.render(uniformState({ ...s, wipe: eased }, roll, false), w, h)
+      },
+    })
+
+  // The animate cycle, recorded for exactly a whole number of palette cycles
+  // so the clip loops without a seam. The slider sets the rough length.
+  const exportLoop = () => {
+    const s = paramsRef.current
+    const speed = Math.max(0.02, s.speed)
+    const cycles = Math.max(1, Math.round((s.loopSeconds || 3) * speed))
+    const duration = cycles / speed
+    return recordVideo({
+      duration,
+      filename: 'parse-loop',
+      drawFrame: (t, { renderer, w, h }) => {
+        renderer.render(uniformState(s, timeRef.current + t * speed, false), w, h)
+      },
+    })
   }
 
   const saveDepth = () => {
@@ -737,6 +760,7 @@ export default function App() {
           onReset={reset}
           onExport={exportPng}
           onExportVideo={exportVideo}
+          onExportLoop={exportLoop}
           recording={recording}
           onSaveDepth={saveDepth}
           onAIDepth={() => runAIDepthFor(imageRef.current)}
