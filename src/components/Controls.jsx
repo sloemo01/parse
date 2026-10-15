@@ -140,9 +140,17 @@ export default function Controls({
           disabled={depthOn === false}
         />
         <Hint>
-          photo tones reads the colors from the picture itself, the way colorama does in the tutorial. otherwise the
-          ramp comes from the direction or the depth map. combine with depth blends the two, and the depth mix
-          slider then sets how much of the ramp comes from the map versus the photo's tones.
+          photo tones reads the colors from the picture itself, the way colorama does in{' '}
+          <a
+            href="https://www.youtube.com/watch?v=JQ85g-OTy50"
+            target="_blank"
+            rel="noreferrer"
+            className="text-foreground/90 underline underline-offset-2 transition-colors hover:text-foreground"
+          >
+            the tutorial
+          </a>
+          . otherwise the ramp comes from the direction or the depth map. combine with depth blends the two, and the
+          depth mix slider then sets how much of the ramp comes from the map versus the photo's tones.
         </Hint>
       </Section>
 
