@@ -6,7 +6,9 @@ import { createRenderer } from './gl/renderer.js'
 import { PALETTES, buildLut } from './lib/palettes.js'
 import { buildDepthPair, buildDepthSoft } from './lib/depth.js'
 import { runAIDepth } from './lib/depthAI.js'
+import { Play, Square, Eye } from 'lucide-react'
 import Controls from './components/Controls.jsx'
+import { Button } from './components/ui/button.jsx'
 import { DIR_VECTORS } from './components/DirectionPad.jsx'
 
 const DEFAULTS = {
@@ -643,79 +645,98 @@ export default function App() {
   }
 
   return (
-    <div className="app" onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
-      <header className="topbar">
-        <h1>parse</h1>
-        <span className="sub">depth gradient colorama</span>
-        {notice ? <span className="notice">{notice}</span> : null}
-        {aiBusy ? <span className="status-line">{aiBusy}</span> : null}
-        <span className="spacer" />
+    <div
+      className="flex h-screen min-h-[620px] flex-col bg-background text-foreground max-[620px]:h-auto max-[620px]:min-h-0"
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
+      <header className="flex items-center gap-3 border-b border-border px-4 py-2.5">
+        <h1 className="text-sm font-semibold tracking-tight">parse</h1>
+        <span className="text-xs text-muted-foreground">depth gradient colorama</span>
+        {notice ? <span className="text-xs text-destructive">{notice}</span> : null}
+        {aiBusy ? <span className="text-xs text-muted-foreground">{aiBusy}</span> : null}
+        <span className="flex-1" />
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          className="file-input"
+          className="sr-only"
           onChange={(e) => {
             const f = e.target.files && e.target.files[0]
             if (f) loadFromFile(f)
             e.target.value = ''
           }}
         />
-        <button
-          type="button"
-          className="ghost topbar-btn"
-          onClick={() => fileInputRef.current && fileInputRef.current.click()}
-        >
+        <Button variant="outline" size="sm" onClick={() => fileInputRef.current && fileInputRef.current.click()}>
           open photo
-        </button>
+        </Button>
         {customPhoto ? (
-          <button
-            type="button"
-            className="ghost topbar-btn"
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => {
               const bundled = bundledRef.current
               if (bundled) showPhoto(bundled.img, bundled.depth, bundled.soft, false)
             }}
           >
             default photo
-          </button>
+          </Button>
         ) : null}
-        <button type="button" className="ghost topbar-btn" onClick={reset}>
+        <Button variant="ghost" size="sm" onClick={reset}>
           reset
-        </button>
+        </Button>
       </header>
-      <main className="main">
-        <section className="stage" ref={stageRef}>
-          <canvas
-            ref={canvasRef}
-            className="gl"
-            onPointerDown={() => setReveal(true)}
-            onPointerUp={() => setReveal(false)}
-            onPointerLeave={() => setReveal(false)}
-            onPointerCancel={() => setReveal(false)}
-          />
+      <main className="flex min-h-0 flex-1 max-[620px]:flex-col">
+        <section className="flex min-w-0 flex-1 flex-col max-[620px]:flex-none">
+          <div
+            className="relative flex min-h-0 flex-1 items-center justify-center p-4 max-[620px]:h-[430px] max-[620px]:flex-none"
+            ref={stageRef}
+          >
+            <canvas
+              ref={canvasRef}
+              className="block rounded-xl bg-black shadow-2xl"
+              onPointerDown={() => setReveal(true)}
+              onPointerUp={() => setReveal(false)}
+              onPointerLeave={() => setReveal(false)}
+              onPointerCancel={() => setReveal(false)}
+            />
+            {status === 'loading' && (
+              <div className="absolute inset-0 flex items-center justify-center p-5 text-center text-xs text-muted-foreground">
+                reading the photo, building the depth map
+              </div>
+            )}
+            {status === 'error' && (
+              <div className="absolute inset-0 flex items-center justify-center p-5 text-center text-xs text-destructive">
+                {error}
+              </div>
+            )}
+            {dragging && (
+              <div className="pointer-events-none absolute inset-3 z-10 flex items-center justify-center rounded-xl border border-dashed border-ring bg-background/70 text-[13px] tracking-wide">
+                drop a photo to load it
+              </div>
+            )}
+            {recording && (
+              <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs">
+                <span className="rec-dot size-2 rounded-full bg-destructive" />
+                recording video
+              </div>
+            )}
+          </div>
           {status === 'ready' && (
-            <div className="transport">
-              <button
-                type="button"
-                className={'pill' + (playing ? ' active' : '')}
+            <div className="flex shrink-0 items-center justify-center gap-2 px-4 pb-4">
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={startPlayback}
                 title={playing ? 'stop the sweep' : 'sweep the reveal in the chosen direction'}
               >
-                {playing ? (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor" stroke="none" />
-                  </svg>
-                ) : (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <polygon points="6 3 20 12 6 21 6 3" fill="currentColor" stroke="none" />
-                  </svg>
-                )}
-                <span>{playing ? 'stop' : 'play'}</span>
-              </button>
-              <button
-                type="button"
-                className={'pill' + (revealing ? ' active' : '')}
+                {playing ? <Square /> : <Play />}
+                {playing ? 'stop' : 'play'}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 title="hold to see the original"
                 onPointerDown={() => setReveal(true)}
                 onPointerUp={() => setReveal(false)}
@@ -729,31 +750,9 @@ export default function App() {
                 }}
                 onBlur={() => setReveal(false)}
               >
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-                <span>{revealing ? 'original' : 'hold to see the original'}</span>
-              </button>
-            </div>
-          )}
-          {status === 'loading' && <div className="overlay">reading the photo, building the depth map</div>}
-          {status === 'error' && <div className="overlay error">{error}</div>}
-          {dragging && <div className="drop-overlay">drop a photo to load it</div>}
-          {recording && (
-            <div className="recording-badge">
-              <span className="rec-dot" />
-              recording video
+                <Eye />
+                {revealing ? 'original' : 'hold to see the original'}
+              </Button>
             </div>
           )}
         </section>

@@ -1,3 +1,5 @@
+import { cn } from '../lib/utils.js'
+
 // Nine pad slots, row by row. Slot 4 is the radial mode, the rest are linear
 // gradient axes (x / y are the direction the ramp increases toward).
 export const DIR_VECTORS = [
@@ -108,7 +110,7 @@ const CELLS = [
 
 export default function DirectionPad({ value, onChange }) {
   return (
-    <div className="pad" role="group" aria-label="Gradient direction">
+    <div className="grid w-[186px] grid-cols-3 gap-1.5" role="group" aria-label="Gradient direction">
       {CELLS.map((cell, i) => (
         <button
           key={cell.key}
@@ -116,8 +118,13 @@ export default function DirectionPad({ value, onChange }) {
           title={cell.title}
           aria-label={cell.title}
           aria-pressed={value === i}
-          className={value === i ? 'on' : ''}
           onClick={() => onChange(i)}
+          className={cn(
+            'flex h-12 items-center justify-center rounded-lg border transition-colors',
+            value === i
+              ? 'border-ring bg-secondary text-foreground'
+              : 'border-border bg-secondary/25 text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+          )}
         >
           <svg
             width="18"
