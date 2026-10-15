@@ -35,7 +35,7 @@ The script runs the model over the photo, stretches the contrast, and writes a g
 
 ## deploy
 
-The repo is private on GitHub (sloemo01/parse) and deploys to Vercel as a static Vite site at https://parse-sloemos-projects.vercel.app, with one serverless function (api/depth.js) that runs the depth model. Visitors download nothing but the app itself; the browser falls back to its own copy of the model only when the endpoint is unreachable.
+The repo is private on GitHub (sloemo01/parse) and deploys to Vercel as a static Vite site at https://parse-sloemos-projects.vercel.app, with one serverless function (api/depth.js) that runs the depth model. Visitors download nothing but the app itself; the browser falls back to its own copy of the model only when the endpoint is unreachable. The function answers same origin POSTs only, caps the body size, throttles each address to ten runs per ten minutes, and asks for a small proof of work bound to the exact photo bytes and the hour, so a flood pays compute per request and a solved nonce is useless anywhere but that one photo.
 
 ## notes
 

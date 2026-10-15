@@ -3,6 +3,7 @@
 // its own bundle, so visitors download nothing. The browser copy below is
 // the fallback: it powers the local file build and covers an unreachable
 // function. WebGPU is used where it exists, wasm otherwise.
+import { POW_BITS, powChallenge, sha256Hex, solvePow } from './pow.js'
 
 const CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3/+esm'
 
@@ -69,10 +70,19 @@ async function runServerDepth(source, onStatus) {
   })
 
   if (onStatus) onStatus({ stage: 'run' })
+  // Proof of work: the server wants a nonce hashed against this exact body
+  // and the current hour, so one real request costs a moment of compute and
+  // a flood pays that compute for every single call.
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  const bucket = Math.floor(Date.now() / 3600000)
+  const nonce = solvePow(powChallenge(bucket, sha256Hex(bytes)), POW_BITS)
   const resp = await fetch('/api/depth', {
     method: 'POST',
-    headers: { 'content-type': blob.type || 'image/jpeg' },
-    body: blob,
+    headers: {
+      'content-type': blob.type || 'image/jpeg',
+      'x-parse-pow': `${bucket}.${nonce}`,
+    },
+    body: bytes,
   })
   if (!resp.ok) throw new Error(`the depth service answered ${resp.status}`)
   const out = await resp.blob()
