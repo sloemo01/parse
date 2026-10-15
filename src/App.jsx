@@ -6,6 +6,7 @@ import { createRenderer } from './gl/renderer.js'
 import { PALETTES, buildLut } from './lib/palettes.js'
 import { buildDepthPair, buildDepthSoft } from './lib/depth.js'
 import { runAIDepth } from './lib/depthAI.js'
+import { encodeWebCodecs } from './lib/videoExport.js'
 import { Play, Square, Eye } from 'lucide-react'
 import Controls from './components/Controls.jsx'
 import { Button } from './components/ui/button.jsx'
@@ -490,6 +491,17 @@ export default function App() {
     }, 'image/png')
   }
 
+  const downloadBlob = (blob, name) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = name
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 8000)
+  }
+
   // Shared recorder: runs drawFrame(t seconds, { renderer, w, h }) for
   // `duration` while MediaRecorder captures the canvas, then saves the clip.
   // Prefer the platform encoder (h264 in mp4) which stays real time on every
@@ -577,23 +589,64 @@ export default function App() {
     dirtyRef.current = true
 
     if (chunks.length) {
-      const blob = new Blob(chunks, { type: mime || 'video/webm' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${filename}.${ext}`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 8000)
+      downloadBlob(new Blob(chunks, { type: mime || 'video/webm' }), `${filename}.${ext}`)
     } else {
       setNotice('the recorder came back empty')
     }
   }
 
+  // Shared clip export: tries the offline WebCodecs path first (quality mode,
+  // 40 Mbps, near native resolution, fixed frame clock), and falls back to the
+  // realtime MediaRecorder when WebCodecs is missing.
+  const exportClip = async ({ duration, filename, drawFrame }) => {
+    const renderer = rendererRef.current
+    const img = imageRef.current
+    const canvas = canvasRef.current
+    if (!renderer || !img || recordRef.current.active) return
+    playRef.current.active = false
+    setPlaying(false)
+
+    const srcW = img.naturalWidth || img.width
+    const srcH = img.naturalHeight || img.height
+    const sizeFor = (cap) => {
+      const scale = Math.min(1, cap / Math.max(srcW, srcH))
+      return [
+        Math.max(2, 2 * Math.round((srcW * scale) / 2)),
+        Math.max(2, 2 * Math.round((srcH * scale) / 2)),
+      ]
+    }
+
+    const [qw, qh] = sizeFor(2560)
+    const fps = 60
+    recordRef.current.active = true
+    setRecording(true)
+    let blob = null
+    try {
+      blob = await encodeWebCodecs({
+        canvas,
+        width: qw,
+        height: qh,
+        fps,
+        frameCount: Math.max(1, Math.round(duration * fps)),
+        drawFrame: (t) => drawFrame(t, { renderer, w: qw, h: qh }),
+      })
+    } catch (err) {
+      blob = null
+    }
+    recordRef.current.active = false
+    setRecording(false)
+    dirtyRef.current = true
+
+    if (blob) {
+      downloadBlob(blob, `${filename}.mp4`)
+      return
+    }
+    await recordVideo({ duration, filename, drawFrame })
+  }
+
   // The sweep the play button runs, recorded end to end.
   const exportVideo = () =>
-    recordVideo({
+    exportClip({
       duration: 0.6 + 1.6 + 0.6,
       filename: 'parse-video',
       drawFrame: (t, { renderer, w, h }) => {
@@ -613,7 +666,7 @@ export default function App() {
     const speed = Math.max(0.02, s.speed)
     const cycles = Math.max(1, Math.round((s.loopSeconds || 3) * speed))
     const duration = cycles / speed
-    return recordVideo({
+    return exportClip({
       duration,
       filename: 'parse-loop',
       drawFrame: (t, { renderer, w, h }) => {
@@ -719,7 +772,7 @@ export default function App() {
             {recording && (
               <div className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs">
                 <span className="rec-dot size-2 rounded-full bg-destructive" />
-                recording video
+                rendering video
               </div>
             )}
           </div>
