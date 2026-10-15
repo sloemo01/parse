@@ -143,7 +143,9 @@ function stretchToDepth(srcCanvas) {
   for (let i = 0; i < n; i++) {
     let v = (gray[i] - lo) / span
     v = v < 0 ? 0 : v > 1 ? 1 : v
-    const px = Math.round(v * 255)
+    // The model reads distance as brightness (near is bright) while the maps
+    // the shader ships with keep the far side bright, so flip to match.
+    const px = Math.round((1 - v) * 255)
     const o = i * 4
     out.data[o] = px
     out.data[o + 1] = px
