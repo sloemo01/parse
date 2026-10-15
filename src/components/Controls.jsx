@@ -305,10 +305,10 @@ export default function Controls({ value, onChange, onReset, onExport, onExportV
       </section>
 
       <p className="note">
-        every photo can run through depth anything v2 (small) right here in the browser, webgpu first with a wasm
-        fallback. the bundled photo ships with a map generated offline (npm run depth); an opened photo gets a quick
-        estimate first and the model refines it once its weights have loaded. the shader only reads a grayscale
-        texture, so any other estimate drops in the same way.
+        on the hosted site the depth runs on a small serverless function that carries the model, so nothing is
+        downloaded to your machine. the local file build falls back to running depth anything v2 (small) in the
+        browser itself, webgpu first. the bundled photo ships with a map generated offline (npm run depth). the
+        shader only reads a grayscale texture, so any estimate drops in the same way.
       </p>
     </aside>
   )

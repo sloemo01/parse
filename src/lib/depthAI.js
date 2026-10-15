@@ -1,8 +1,8 @@
-// Depth Anything V2 (small) running fully in the browser through
-// transformers.js. The library and the quantized weights (about 26 MB) come
-// from public CDNs on first use and stay in the browser cache, so each
-// visitor downloads them once ever. WebGPU is used where it exists, wasm
-// otherwise.
+// Depth. On a hosted origin the photo goes to /api/depth, a serverless
+// function that carries the quantized Depth Anything V2 (small) model inside
+// its own bundle, so visitors download nothing. The browser copy below is
+// the fallback: it powers the local file build and covers an unreachable
+// function. WebGPU is used where it exists, wasm otherwise.
 
 const CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3/+esm'
 
@@ -50,9 +50,51 @@ export function loadDepthPipeline(onStatus) {
   return pipePromise
 }
 
+// Sends the photo to the serverless function and gets the depth map back as
+// a PNG. Nothing to download on the client side.
+async function runServerDepth(source, onStatus) {
+  const srcW = source.naturalWidth || source.width
+  const srcH = source.naturalHeight || source.height
+  const maxSide = 1024
+  const scale = Math.min(1, maxSide / Math.max(srcW, srcH))
+  const w = Math.max(16, Math.round(srcW * scale))
+  const h = Math.max(16, Math.round(srcH * scale))
+
+  const input = document.createElement('canvas')
+  input.width = w
+  input.height = h
+  input.getContext('2d').drawImage(source, 0, 0, w, h)
+  const blob = await new Promise((resolve, reject) => {
+    input.toBlob((b) => (b ? resolve(b) : reject(new Error('could not encode the photo'))), 'image/jpeg', 0.92)
+  })
+
+  if (onStatus) onStatus({ stage: 'run' })
+  const resp = await fetch('/api/depth', {
+    method: 'POST',
+    headers: { 'content-type': blob.type || 'image/jpeg' },
+    body: blob,
+  })
+  if (!resp.ok) throw new Error(`the depth service answered ${resp.status}`)
+  const out = await resp.blob()
+  const bitmap = await createImageBitmap(out)
+  const canvas = document.createElement('canvas')
+  canvas.width = bitmap.width
+  canvas.height = bitmap.height
+  canvas.getContext('2d').drawImage(bitmap, 0, 0)
+  if (bitmap.close) bitmap.close()
+  return stretchToDepth(canvas)
+}
+
 // Runs the model over any image and returns a grayscale depth canvas,
 // stretched to the full range the way the offline pipeline writes its maps.
 export async function runAIDepth(source, onStatus) {
+  if (typeof location !== 'undefined' && (location.protocol === 'http:' || location.protocol === 'https:')) {
+    try {
+      return await runServerDepth(source, onStatus)
+    } catch (err) {
+      // the service can be down or unreachable; the local model takes over
+    }
+  }
   const mod = await loadLib()
   const pipe = await loadDepthPipeline(onStatus)
 

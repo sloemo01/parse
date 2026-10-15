@@ -10,14 +10,14 @@
     "depth": "node tools/build-depth.mjs"
   },
   "dependencies": {
+    "@huggingface/transformers": "^3.3.3",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
-    "@huggingface/transformers": "^3.3.3",
     "@vitejs/plugin-react": "^4.3.4",
     "pngjs": "^7.0.0",
-    "sharp": "^0.34.5",
     "vite": "^5.4.11",
     "vite-plugin-singlefile": "^2.0.3"
   }
