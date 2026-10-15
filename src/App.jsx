@@ -16,6 +16,7 @@ const DEFAULTS = {
   dirIndex: 4,
   invert: false,
   depthMix: 0.75,
+  depthOn: true,
   photo: true,
   wipe: 0,
   wipeSource: 0,
@@ -54,6 +55,7 @@ function initialParams() {
   num('soft', 0.02, 0.5, (v) => (out.soft = v))
   num('blur', 0, 1, (v) => (out.sweepBlur = v))
   num('depth', 0, 1, (v) => (out.depthMix = v))
+  if (q.get('depthmap') === '0') out.depthOn = false
   num('blend', 0, 1, (v) => (out.blend = v))
   num('dir', 0, 8, (v) => (out.dirIndex = Math.round(v)))
   const pal = q.get('palette')
@@ -76,10 +78,10 @@ function uniformState(s, time, original) {
     dirY: v.y,
     radial: s.dirIndex === 4 ? 1 : 0,
     invert: s.invert ? 1 : 0,
-    depthMix: s.depthMix,
+    depthMix: s.depthOn === false ? 0 : s.depthMix,
     photo: s.photo ? 1 : 0,
     wipe: s.wipe,
-    wipeDepth: s.wipeSource,
+    wipeDepth: s.depthOn === false ? 0 : s.wipeSource,
     soft: s.soft,
     sweepBlur: s.sweepBlur,
     dither: s.dither ? s.ditherStrength : 0,
@@ -91,7 +93,7 @@ function uniformState(s, time, original) {
     roll: time % 1,
     steps: s.steps,
     blend: s.blend,
-    viewDepth: s.viewDepth ? 1 : 0,
+    viewDepth: s.depthOn === false ? 0 : s.viewDepth ? 1 : 0,
     original: original ? 1 : 0,
   }
 }
@@ -208,6 +210,7 @@ export default function App() {
   const runAIDepthFor = async (source) => {
     const renderer = rendererRef.current
     if (!renderer || !source) return
+    if (params.depthOn === false) return
     const token = ++aiTokenRef.current
     setAiBusy('loading depth model')
     try {
@@ -242,7 +245,7 @@ export default function App() {
         const pair = buildDepthPair(source)
         showPhoto(source, pair.depth, pair.soft, true)
         setNotice('')
-        runAIDepthFor(source)
+        if (params.depthOn !== false) runAIDepthFor(source)
       } catch (err) {
         setNotice(err && err.message ? err.message : 'could not read that photo')
       } finally {

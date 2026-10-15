@@ -23,23 +23,35 @@ function Section({ title, children, defaultOpen = true }) {
   )
 }
 
-function PSlider({ label, value, min, max, step, onChange, display }) {
+function PSlider({ label, value, min, max, step, onChange, display, disabled }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className={cn('flex flex-col gap-1.5', disabled && 'opacity-50')}>
       <div className="flex items-baseline justify-between">
         <span className="text-xs text-foreground/85">{label}</span>
         <span className="text-[11px] tabular-nums text-muted-foreground">{display ? display(value) : value}</span>
       </div>
-      <Slider value={[value]} min={min} max={max} step={step} onValueChange={(v) => onChange(v[0])} />
+      <Slider
+        value={[value]}
+        min={min}
+        max={max}
+        step={step}
+        onValueChange={(v) => onChange(v[0])}
+        disabled={disabled}
+      />
     </div>
   )
 }
 
-function Toggle({ label, checked, onChange }) {
+function Toggle({ label, checked, onChange, disabled }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-3">
+    <label
+      className={cn(
+        'flex items-center justify-between gap-3',
+        disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+      )}
+    >
       <span className="text-xs text-foreground/85">{label}</span>
-      <Switch checked={checked} onCheckedChange={onChange} />
+      <Switch checked={checked} onCheckedChange={onChange} disabled={disabled} />
     </label>
   )
 }
@@ -63,7 +75,7 @@ export default function Controls({
 }) {
   const pct = (v) => `${Math.round(v * 100)}%`
   const {
-    dirIndex, invert, depthMix, photo, wipe, wipeSource, soft, sweepBlur, rollColors,
+    dirIndex, invert, depthMix, depthOn, photo, wipe, wipeSource, soft, sweepBlur, rollColors,
     repeat, wrap, offset, steps, blend, paletteId, hueShift, animate, speed, viewDepth,
     dither, ditherStrength, ditherSize, ditherStyle, loopSeconds,
   } = value
@@ -153,7 +165,10 @@ export default function Controls({
           max={1}
           step={0.01}
           onChange={(v) => onChange({ wipeSource: v })}
-          display={(v) => (v >= 0.999 ? 'depth map' : v <= 0.001 ? 'direction' : `${Math.round(v * 100)}%`)}
+          disabled={depthOn === false}
+          display={(v) =>
+            depthOn === false ? 'direction' : v >= 0.999 ? 'depth map' : v <= 0.001 ? 'direction' : `${Math.round(v * 100)}%`
+          }
         />
         <PSlider
           label="softness"
@@ -290,6 +305,11 @@ export default function Controls({
       </Section>
 
       <Section title="depth" defaultOpen={false}>
+        <Toggle
+          label="use depth map"
+          checked={depthOn !== false}
+          onChange={(v) => onChange({ depthOn: v })}
+        />
         <PSlider
           label="depth mix"
           value={depthMix}
@@ -298,23 +318,32 @@ export default function Controls({
           step={0.01}
           onChange={(v) => onChange({ depthMix: v })}
           display={pct}
+          disabled={depthOn === false}
         />
-        <Toggle label="view depth" checked={viewDepth} onChange={(v) => onChange({ viewDepth: v })} />
+        <Toggle
+          label="view depth"
+          checked={viewDepth}
+          onChange={(v) => onChange({ viewDepth: v })}
+          disabled={depthOn === false}
+        />
         <div className="flex flex-wrap gap-1.5">
           <Button
             variant="outline"
             size="sm"
             onClick={onAIDepth}
-            disabled={aiBusy}
+            disabled={aiBusy || depthOn === false}
             title="runs depth anything v2 on the current photo"
           >
             {aiBusy ? 'ai depth...' : 'ai depth'}
           </Button>
-          <Button variant="outline" size="sm" onClick={onSaveDepth}>
+          <Button variant="outline" size="sm" onClick={onSaveDepth} disabled={depthOn === false}>
             save map
           </Button>
         </div>
-        <Hint>depth mix blends the ramp between the position along the direction and the depth map.</Hint>
+        <Hint>
+          depth mix blends the ramp between the position along the direction and the depth map. switch the depth map off
+          and the ramp and the reveal run on tone and position alone, with no depth pass and no server call.
+        </Hint>
       </Section>
 
       <Section title="output">
