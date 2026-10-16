@@ -741,11 +741,12 @@ export default function App() {
         </Button>
         <a
           id="tour-github"
+          data-slot="button"
           href="https://github.com/sloemo01/parse"
           target="_blank"
           rel="noreferrer"
           title="parse on github, the full source"
-          className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+          className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'has-[>img]:px-2.5')}
         >
           <img src={githubMark} alt="" className="size-4" />
           github
