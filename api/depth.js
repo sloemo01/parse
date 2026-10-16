@@ -1,30 +1,25 @@
-// Serverless depth: the deployed site posts a photo here and gets a depth
-// map back. The quantized model lives inside this function's bundle, so
-// visitors never download it. The browser only falls back to its own copy
-// when this endpoint is unreachable.
+// Serverless depth: the deployed site posts raw RGB pixels here and gets a
+// grayscale depth map back. No image decoder lives in here, on either side
+// of the model: the canvas that draws the page already produced these pixels.
+// onnxruntime drives the quantized model straight from depthCore, and the
+// weights live inside this function's bundle, so visitors never download
+// anything. The browser only falls back to its own copy when this endpoint
+// is unreachable.
 //
 // Abuse guards, cheapest first: same origin only (origin plus the browser's
 // own fetch signals), body cap, per IP throttle, then a proof of work bound
-// to the exact photo bytes and the hour, so a flood pays real compute per
+// to the exact pixel bytes and the hour, so a flood pays real compute per
 // request.
-import path from 'node:path'
-import sharp from 'sharp'
-import { pipeline, env, RawImage } from '@huggingface/transformers'
+import { runDepth } from '../src/lib/depthCore.js'
 import { POW_BITS, powChallenge, sha256Hex, verifyPow } from '../src/lib/pow.js'
 
-env.allowRemoteModels = false
-env.allowLocalModels = true
-env.localModelPath = path.join(process.cwd(), 'models')
-env.cacheDir = '/tmp'
-
-const MODEL_ID = 'onnx-community/depth-anything-v2-small'
-const MAX_SIDE = 768
+// The client draws to 768 on the long side; anything up to 1024 is taken as
+// is. depthCore resizes to the model's working size from there.
+const MAX_PIXEL_SIDE = 1024
 const ALLOWED_ORIGIN = 'https://parse-sloemos-projects.vercel.app'
 const MAX_BODY = 10 * 1024 * 1024
 const WINDOW_MS = 10 * 60 * 1000
 const MAX_RUNS = 15
-
-let pipePromise = null
 
 // Warm instance scope only, which is exactly the window an attacker on one
 // instance gets. Anything beyond that is Vercel's DDoS layer territory.
@@ -47,14 +42,14 @@ function rateLimited(ip) {
   return false
 }
 
-function getPipeline() {
-  if (!pipePromise) {
-    pipePromise = pipeline('depth-estimation', MODEL_ID, { dtype: 'q8', device: 'cpu' })
-  }
-  return pipePromise
-}
-
 async function readBody(req) {
+  // Some runtimes hand the body over already buffered on req.body and the
+  // stream yields nothing; classic Node (production) streams it instead.
+  if (req.body != null) {
+    if (Buffer.isBuffer(req.body)) return req.body
+    if (req.body instanceof Uint8Array) return Buffer.from(req.body)
+    if (req.body instanceof ArrayBuffer) return Buffer.from(new Uint8Array(req.body))
+  }
   const chunks = []
   for await (const chunk of req) chunks.push(chunk)
   return Buffer.concat(chunks)
@@ -67,8 +62,14 @@ export default async function handler(req, res) {
   }
 
   // Browsers always send Origin on our own page's fetches, so anything
-  // without it is not the site talking.
-  if ((req.headers.origin || '') !== ALLOWED_ORIGIN) {
+  // without it is not the site talking. Localhost only counts under
+  // `vercel dev`, never in a deployed environment.
+  const origin = req.headers.origin || ''
+  // A deployed function always has VERCEL_ENV set (preview or production);
+  // only a local `vercel dev` or an offline run leaves it unset.
+  const envName = process.env.VERCEL_ENV
+  const isDev = (envName == null || envName === 'development') && /^http:\/\/localhost(:\d+)?$/.test(origin)
+  if (origin !== ALLOWED_ORIGIN && !isDev) {
     res.status(403).json({ error: 'same origin only' })
     return
   }
@@ -80,7 +81,7 @@ export default async function handler(req, res) {
     res.status(403).json({ error: 'same origin only' })
     return
   }
-  if (!String(req.headers.referer || '').startsWith(`${ALLOWED_ORIGIN}/`)) {
+  if (!isDev && !String(req.headers.referer || '').startsWith(`${ALLOWED_ORIGIN}/`)) {
     res.status(403).json({ error: 'same origin only' })
     return
   }
@@ -126,26 +127,30 @@ export default async function handler(req, res) {
       return
     }
 
-    const { data, info } = await sharp(body)
-      .rotate()
-      .resize({ width: MAX_SIDE, height: MAX_SIDE, fit: 'inside', withoutEnlargement: true })
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true })
+    // Raw RGB pixels, no decoder involved: x-parse-w and x-parse-h carry
+    // the shape, and the body must be exactly w x h x 3 bytes of it.
+    const w = Number(req.headers['x-parse-w'])
+    const h = Number(req.headers['x-parse-h'])
+    if (
+      !Number.isInteger(w) || !Number.isInteger(h) ||
+      w < 16 || h < 16 || w > MAX_PIXEL_SIDE || h > MAX_PIXEL_SIDE ||
+      w * h * 3 !== body.length
+    ) {
+      res.status(400).json({ error: 'expected raw rgb pixels, w x h x 3 bytes' })
+      return
+    }
 
-    const image = new RawImage(new Uint8ClampedArray(data), info.width, info.height, info.channels)
-    const pipe = await getPipeline()
-    const { depth } = await pipe(image)
+    const { width: dw, height: dh, data } = await runDepth(
+      new Uint8Array(body.buffer, body.byteOffset, body.length),
+      w,
+      h,
+    )
 
-    const png = await sharp(Buffer.from(depth.data), {
-      raw: { width: depth.width, height: depth.height, channels: depth.channels },
-    })
-      .png({ compressionLevel: 6 })
-      .toBuffer()
-
-    res.setHeader('content-type', 'image/png')
+    res.setHeader('content-type', 'application/octet-stream')
+    res.setHeader('x-depth-w', String(dw))
+    res.setHeader('x-depth-h', String(dh))
     res.setHeader('cache-control', 'no-store')
-    res.status(200).send(png)
+    res.status(200).send(Buffer.from(data.buffer, data.byteOffset, data.byteLength))
   } catch (err) {
     res.status(500).json({ error: err && err.message ? err.message : String(err) })
   }

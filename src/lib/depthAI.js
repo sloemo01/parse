@@ -1,4 +1,4 @@
-// Depth. On a hosted origin the photo goes to /api/depth, a serverless
+// Depth. On a hosted origin the pixels go to /api/depth, a serverless
 // function that carries the quantized Depth Anything V2 (small) model inside
 // its own bundle, so visitors download nothing. The browser copy below is
 // the fallback: it powers the local file build and covers an unreachable
@@ -51,12 +51,13 @@ export function loadDepthPipeline(onStatus) {
   return pipePromise
 }
 
-// Sends the photo to the serverless function and gets the depth map back as
-// a PNG. Nothing to download on the client side.
+// Sends the drawn pixels straight to the serverless function and gets the
+// depth map back as raw grayscale. No image formats on the wire, so nothing
+// on either side has to decode or encode a picture.
 async function runServerDepth(source, onStatus) {
   const srcW = source.naturalWidth || source.width
   const srcH = source.naturalHeight || source.height
-  const maxSide = 1024
+  const maxSide = 768
   const scale = Math.min(1, maxSide / Math.max(srcW, srcH))
   const w = Math.max(16, Math.round(srcW * scale))
   const h = Math.max(16, Math.round(srcH * scale))
@@ -64,35 +65,51 @@ async function runServerDepth(source, onStatus) {
   const input = document.createElement('canvas')
   input.width = w
   input.height = h
-  input.getContext('2d').drawImage(source, 0, 0, w, h)
-  const blob = await new Promise((resolve, reject) => {
-    input.toBlob((b) => (b ? resolve(b) : reject(new Error('could not encode the photo'))), 'image/jpeg', 0.92)
-  })
+  const ictx = input.getContext('2d')
+  ictx.imageSmoothingQuality = 'high'
+  ictx.drawImage(source, 0, 0, w, h)
+  const pixels = ictx.getImageData(0, 0, w, h).data
+  const rgb = new Uint8Array(w * h * 3)
+  for (let i = 0, j = 0; j < rgb.length; i += 4, j += 3) {
+    rgb[j] = pixels[i]
+    rgb[j + 1] = pixels[i + 1]
+    rgb[j + 2] = pixels[i + 2]
+  }
 
   if (onStatus) onStatus({ stage: 'run' })
   // Proof of work: the server wants a nonce hashed against this exact body
   // and the current hour, so one real request costs a moment of compute and
   // a flood pays that compute for every single call.
-  const bytes = new Uint8Array(await blob.arrayBuffer())
   const bucket = Math.floor(Date.now() / 3600000)
-  const nonce = solvePow(powChallenge(bucket, sha256Hex(bytes)), POW_BITS)
+  const nonce = solvePow(powChallenge(bucket, sha256Hex(rgb)), POW_BITS)
   const resp = await fetch('/api/depth', {
     method: 'POST',
     headers: {
-      'content-type': blob.type || 'image/jpeg',
+      'content-type': 'application/octet-stream',
+      'x-parse-w': String(w),
+      'x-parse-h': String(h),
       'x-parse-pow': `${bucket}.${nonce}`,
     },
-    body: bytes,
+    body: rgb,
   })
   if (!resp.ok) throw new Error(`the depth service answered ${resp.status}`)
-  const out = await resp.blob()
-  const bitmap = await createImageBitmap(out)
-  const canvas = document.createElement('canvas')
-  canvas.width = bitmap.width
-  canvas.height = bitmap.height
-  canvas.getContext('2d').drawImage(bitmap, 0, 0)
-  if (bitmap.close) bitmap.close()
-  return stretchToDepth(canvas)
+  const dw = Number(resp.headers.get('x-depth-w'))
+  const dh = Number(resp.headers.get('x-depth-h'))
+  const grey = new Uint8Array(await resp.arrayBuffer())
+  if (!dw || !dh || grey.length !== dw * dh) throw new Error('the depth map came back malformed')
+  const out = document.createElement('canvas')
+  out.width = dw
+  out.height = dh
+  const octx = out.getContext('2d')
+  const img = octx.createImageData(dw, dh)
+  for (let i = 0, j = 0; i < grey.length; i++, j += 4) {
+    img.data[j] = grey[i]
+    img.data[j + 1] = grey[i]
+    img.data[j + 2] = grey[i]
+    img.data[j + 3] = 255
+  }
+  octx.putImageData(img, 0, 0)
+  return stretchToDepth(out)
 }
 
 // Runs the model over any image and returns a grayscale depth canvas,
