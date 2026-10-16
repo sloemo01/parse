@@ -33,7 +33,10 @@ const binSrc = path.join(src, 'bin/napi-v3', keep)
 const binDst = path.join(stageNm, 'onnxruntime-node/bin/napi-v3', keep)
 mkdirSync(binDst, { recursive: true })
 for (const f of readdirSync(binSrc)) {
+  // the duplicate engine (only libonnxruntime.so.1 is loaded)
   if (process.platform === 'linux' && f.startsWith('libonnxruntime.so.1.')) continue
+  // GPU execution providers: cuda alone is 340 MB, and we run on the CPU
+  if (f.startsWith('libonnxruntime_providers_') && f !== 'libonnxruntime_providers_shared.so') continue
   cpSync(path.join(binSrc, f), path.join(binDst, f))
 }
 
