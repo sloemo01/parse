@@ -1,5 +1,7 @@
 # parse
 
+![parse, the colorama shader with its control panel](docs/preview.png)
+
 A React + WebGL shader that recolors a photo with an After Effects Colorama style cycle, then wipes it away with a gradient transition that reveals the original underneath. The transition is modelled on the [SaaS gradient transition tutorial](https://www.youtube.com/watch?v=JQ85g-OTy50) (sheikh sohel on YouTube): a Colorama style colorized layer, a gradient wipe driven by a real depth map, and a soft animated blur that rides the transition.
 
 ## run
