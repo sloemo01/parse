@@ -25,6 +25,11 @@ const MAX_RUNS = 15
 // instance gets. Anything beyond that is Vercel's DDoS layer territory.
 const hits = new Map()
 
+// Warm-instance depth cache, keyed by the sha of the exact pixel bytes.
+// Bounded so a warm instance never grows past a few megabytes.
+const depthCache = new Map()
+const CACHE_MAX = 16
+
 function rateLimited(ip) {
   const now = Date.now()
   const list = (hits.get(ip) || []).filter((t) => now - t < WINDOW_MS)
@@ -122,8 +127,23 @@ export default async function handler(req, res) {
       res.status(422).json({ error: 'missing or stale proof of work' })
       return
     }
-    if (!verifyPow(powChallenge(bucket, sha256Hex(body)), nonce, POW_BITS)) {
+    const bodyHash = sha256Hex(body)
+    if (!verifyPow(powChallenge(bucket, bodyHash), nonce, POW_BITS)) {
       res.status(422).json({ error: 'bad proof of work' })
+      return
+    }
+
+    // The proof of work already hashed these exact pixels, so repeat posts
+    // of the same photo are a map lookup instead of a second inference.
+    // Same bytes in, same depth out.
+    const hit = depthCache.get(bodyHash)
+    if (hit) {
+      res.setHeader('content-type', 'application/octet-stream')
+      res.setHeader('x-depth-w', String(hit.w))
+      res.setHeader('x-depth-h', String(hit.h))
+      res.setHeader('x-depth-cache', 'hit')
+      res.setHeader('cache-control', 'no-store')
+      res.status(200).send(hit.buf)
       return
     }
 
@@ -155,11 +175,15 @@ export default async function handler(req, res) {
       runtimeUrl,
     )
 
+    const buf = Buffer.from(data.buffer, data.byteOffset, data.byteLength)
+    depthCache.set(bodyHash, { w: dw, h: dh, buf })
+    if (depthCache.size > CACHE_MAX) depthCache.delete(depthCache.keys().next().value)
+
     res.setHeader('content-type', 'application/octet-stream')
     res.setHeader('x-depth-w', String(dw))
     res.setHeader('x-depth-h', String(dh))
     res.setHeader('cache-control', 'no-store')
-    res.status(200).send(Buffer.from(data.buffer, data.byteOffset, data.byteLength))
+    res.status(200).send(buf)
   } catch (err) {
     res.status(500).json({ error: err && err.message ? err.message : String(err) })
   }

@@ -159,12 +159,23 @@ function loadORT(runtimeUrl) {
   return ortPromise
 }
 
+// Containers can report far more cores than the vCPU quota actually is,
+// and onnxruntime would then spawn a crowd of threads that spin against a
+// fraction of a core, burning active CPU for nothing. Two is the sane pin
+// for these small functions, and the env override makes it tunable without
+// a code change.
+const THREADS = Number(process.env.PARSE_ORT_THREADS || 2)
+
 function getSession(modelUrl, runtimeUrl) {
   if (!sessionPromise) {
     sessionPromise = (async () => {
       const ort = await loadORT(runtimeUrl)
       const modelPath = await ensureModel(modelUrl)
-      const session = await ort.InferenceSession.create(modelPath)
+      const session = await ort.InferenceSession.create(modelPath, {
+        intraOpNumThreads: THREADS,
+        interOpNumThreads: 1,
+        graphOptimizationLevel: 'all',
+      })
       return { session, ort }
     })()
     sessionPromise.catch(() => {
@@ -224,9 +235,10 @@ function bilinear(src, sw, sh, dw, dh) {
 // The coefficients live in flat typed arrays: the per-pixel loops are the
 // hot path of every request and pair-arrays with destructuring made them
 // several times slower than they need to be on a small vCPU.
-function resample(src, sw, sh, dw, dh) {
-  const out = new Float32Array(dw * dh)
-
+// Resamples one plane straight into the destination tensor, rescaling and
+// normalizing on the final store: one pass fewer over a million floats per
+// plane, and the arithmetic is the same one the plain version did.
+function resampleInto(src, sw, sh, dw, dh, dst, dstOff, mean, std) {
   function coeffs(dstSize, srcSize) {
     const scale = dstSize / srcSize
     const filterscale = scale < 1 ? 1 / scale : 1
@@ -276,10 +288,9 @@ function resample(src, sw, sh, dw, dh) {
     for (let x = 0; x < dw; x++) {
       let sum = 0
       for (let k = 0; k < n; k++) sum += tmp[cy.idx[s0 + k] * dw + x] * cy.wgt[s0 + k]
-      out[row + x] = sum
+      dst[dstOff + row + x] = (sum / 255 - mean) / std
     }
   }
-  return out
 }
 
 // Runs the model over raw rgb bytes and returns raw grayscale depth at the
@@ -296,17 +307,13 @@ export async function runDepth(rgb, w, h, modelUrl, runtimeUrl) {
     g[i] = rgb[j + 1]
     b[i] = rgb[j + 2]
   }
-  const planes = [resample(r, w, h, outW, outH), resample(g, w, h, outW, outH), resample(b, w, h, outW, outH)]
-
-  // NCHW float tensor, rescaled and normalized the way the processor does
+  // NCHW float tensor, rescaled and normalized the way the processor does,
+  // written straight out of the resamplers
   const chw = new Float32Array(3 * outW * outH)
-  for (let c = 0; c < 3; c++) {
-    const plane = planes[c]
-    const off = c * outW * outH
-    for (let i = 0; i < plane.length; i++) {
-      chw[off + i] = (plane[i] / 255 - MEAN[c]) / STD[c]
-    }
-  }
+  const planeSize = outW * outH
+  resampleInto(r, w, h, outW, outH, chw, 0, MEAN[0], STD[0])
+  resampleInto(g, w, h, outW, outH, chw, planeSize, MEAN[1], STD[1])
+  resampleInto(b, w, h, outW, outH, chw, planeSize * 2, MEAN[2], STD[2])
 
   const { session, ort } = await getSession(modelUrl, runtimeUrl)
   const out = await session.run({ pixel_values: new ort.Tensor('float32', chw, [1, 3, outH, outW]) })
