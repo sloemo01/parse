@@ -7,10 +7,11 @@ import { PALETTES, buildLut } from './lib/palettes.js'
 import { buildDepthPair, buildDepthSoft } from './lib/depth.js'
 import { runAIDepth } from './lib/depthAI.js'
 import { encodeWebCodecs } from './lib/videoExport.js'
-import { Play, Square, Eye, Compass } from 'lucide-react'
+import { Play, Square, Eye, Compass, Github } from 'lucide-react'
 import Controls from './components/Controls.jsx'
 import Tour from './components/Tour.jsx'
-import { Button } from './components/ui/button.jsx'
+import { Button, buttonVariants } from './components/ui/button.jsx'
+import { cn } from './lib/utils.js'
 import { DIR_VECTORS } from './components/DirectionPad.jsx'
 
 const DEFAULTS = {
@@ -737,6 +738,17 @@ export default function App() {
         >
           open photo
         </Button>
+        <a
+          id="tour-github"
+          href="https://github.com/sloemo01/parse"
+          target="_blank"
+          rel="noreferrer"
+          title="parse on github, the full source"
+          className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+        >
+          <Github />
+          github
+        </a>
         {customPhoto ? (
           <Button
             variant="outline"

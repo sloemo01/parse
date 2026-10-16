@@ -12,13 +12,19 @@ const STEPS = [
     anchor: '#tour-brand',
     scroll: false,
     title: 'the full tour',
-    text: 'Every control in the app, one stop at a time, 41 in total. The card stays here on the left so the panel stays visible. next and back move you along, esc or a click outside closes.',
+    text: 'Every control in the app, one stop at a time, 42 in total. next and back move you along, esc or a click outside closes.',
   },
   {
     anchor: '#tour-open-photo',
     scroll: false,
     title: 'open photo',
     text: 'Load any photo at any size, or drop one straight onto the canvas. Once you load your own, a default photo button appears beside this one to bring the lighthouse back.',
+  },
+  {
+    anchor: '#tour-github',
+    scroll: false,
+    title: 'the source',
+    text: 'parse is open source. This button opens the repo on github: the shader, the depth function, the whole thing.',
   },
   {
     anchor: '#tour-reset',
