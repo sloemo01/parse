@@ -90,7 +90,7 @@ const STEPS = [
     anchor: '#tour-dirpad',
     open: 'sec-direction',
     title: 'direction',
-    text: 'The arrows push the ramp across the frame; the center dot makes it a radial bloom from the middle. While animate runs, the pattern travels in whichever direction is picked.',
+    text: 'The arrows push the ramp across the frame; the center dot makes it a radial bloom from the middle.',
   },
   {
     anchor: '#tour-invert',
@@ -138,7 +138,7 @@ const STEPS = [
     anchor: '#tour-animate',
     open: 'sec-motion',
     title: 'animate',
-    text: 'Cycles the palette forever, and the colour pattern travels in the current direction. A living loop of the whole image.',
+    text: 'Cycles the palette forever, a living loop of the whole image.',
   },
   {
     anchor: '#tour-speed',
