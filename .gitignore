@@ -5,3 +5,4 @@ dist
 *.log
 public/model.onnx
 public/ort-*.tar.br
+models/
