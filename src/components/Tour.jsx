@@ -307,10 +307,27 @@ export default function Tour({ open, onClose }) {
       const el = document.querySelector(anchor)
       const narrow = window.innerWidth < 620
       if (el && (s.scroll !== false || narrow)) {
-        el.scrollIntoView({ block: 'center' })
+        el.scrollIntoView({ block: 'center', behavior: 'instant' })
         await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
       }
       if (alive) measure(anchor)
+      // Panels and sections can keep settling for a moment (collapsibles
+      // animate, fonts swap), so keep re-measuring until two reads agree.
+      let last = null
+      for (let i = 0; i < 14 && alive; i++) {
+        await new Promise((r) => setTimeout(r, 120))
+        if (!alive) return
+        const el2 = document.querySelector(anchor)
+        if (!el2) {
+          setRect(null)
+          return
+        }
+        const r2 = el2.getBoundingClientRect()
+        const key = `${Math.round(r2.left)},${Math.round(r2.top)},${Math.round(r2.width)},${Math.round(r2.height)}`
+        if (last === key) break
+        last = key
+        setRect(r2)
+      }
     }
     run()
     const again = () => measure(anchor)
