@@ -98,6 +98,7 @@ function uniformState(s, time, original) {
     offset: s.offset,
     roll: time % 1,
     travel: s.animate ? ((time % 1) + 1) % 1 : 0,
+    travelOn: s.animate ? 1 : 0,
     steps: s.steps,
     blend: s.blend,
     viewDepth: s.depthOn === false ? 0 : s.viewDepth ? 1 : 0,

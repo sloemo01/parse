@@ -28,6 +28,7 @@ uniform float uPhoto;
 uniform float uCombine;
 uniform float uRoll;
 uniform float uTravel;
+uniform float uTravelOn;
 uniform float uRepeat;
 uniform float uWrap;
 uniform float uOffset;
@@ -99,28 +100,12 @@ void main() {
 
   // The ramp input: position along the direction, the depth map, or the
   // photo's own tones (a gradient map, the way colorama reads the image).
-  // Travel: while the animate toggle runs, the ramp inputs are sampled from
-  // a shifted uv, so the colour pattern itself moves in the chosen direction
-  // (rings expand outward on the radial dot). A travel of 1.0 is a whole
-  // frame of shift, which keeps looped exports seamless.
-  vec2 rampUv = uv;
-  if (uTravel != 0.0) {
-    if (uRadial > 0.5) {
-      float zoom = 1.0 - 0.15 * sin(uTravel * 6.2831853);
-      rampUv = (uv - 0.5) * zoom + 0.5;
-    } else {
-      vec2 travelDir = normalize(vec2(uDirX, uDirY) + vec2(1e-6));
-      rampUv = uv - travelDir * uTravel;
-    }
-    rampUv = rampUv - floor(rampUv);
-  }
-  float depthRamp = texture2D(uDepth, rampUv).r;
-  float v = mix(t, depthRamp, uDepthMix);
-  float lum = dot(texture2D(uImage, rampUv).rgb, vec3(0.2126, 0.7152, 0.0722));
+  float v = mix(t, depth, uDepthMix);
+  float lum = dot(img, vec3(0.2126, 0.7152, 0.0722));
   // Photo tones read the ramp from the image itself. The combine mode blends
   // those tones with the depth map instead of letting the tones override
   // everything, at the depth mix amount.
-  float photoV = mix(lum, depthRamp, uDepthMix * uCombine);
+  float photoV = mix(lum, depth, uDepthMix * uCombine);
   v = mix(v, photoV, uPhoto);
   v = mix(v, 1.0 - v, uInvert);
 
@@ -129,8 +114,13 @@ void main() {
 
   // Rolling colors advance the ramp through the palette cycle. The roll
   // always wraps, so a finished sweep can never leave the ramp saturated
-  // into a flat color.
-  v = fract(v + uRoll);
+  // into a flat color. While animate runs in photo tones mode the motion
+  // turns into a wave: the tones still anchor every pixel, and the colour
+  // pattern itself slides across the frame in the chosen direction. The
+  // image never moves; only the palette does.
+  float flow = uTravelOn * uPhoto * (t - uTravel);
+  float cycle = (1.0 - uTravelOn * uPhoto) * uRoll;
+  v = fract(v + flow + cycle);
 
   // Dither nudges the ramp by a bayer or noise pattern just before the
   // posterize step, so band edges break up into ordered dots. uDither is
