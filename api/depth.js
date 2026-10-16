@@ -140,10 +140,15 @@ export default async function handler(req, res) {
       return
     }
 
+    // The weights ride along with this deployment as a static file; the
+    // function pulls them into /tmp once per cold instance.
+    const host = req.headers['x-forwarded-host'] || req.headers.host || ''
+    const modelUrl = host ? `${isDev ? 'http' : 'https'}://${host}/model.onnx` : null
     const { width: dw, height: dh, data } = await runDepth(
       new Uint8Array(body.buffer, body.byteOffset, body.length),
       w,
       h,
+      modelUrl,
     )
 
     res.setHeader('content-type', 'application/octet-stream')

@@ -5,21 +5,60 @@
 // DPT image processor: shortest side to 518, the other side rounded to a
 // multiple of 14, rescale to 0..1, normalize with the ImageNet mean/std.
 import path from 'node:path'
+import { existsSync, statSync } from 'node:fs'
+import { writeFile } from 'node:fs/promises'
 import { InferenceSession, Tensor } from 'onnxruntime-node'
 
-const MODEL_PATH = path.join(
+const DEFAULT_MODEL = path.join(
   process.cwd(),
   'models/onnx-community/depth-anything-v2-small/onnx/model_quantized.onnx',
 )
+// Bump the v when the weights change so stale caches never linger.
+const CACHE_PATH = '/tmp/parse-depth-model-v1.onnx' 
 const WORK_SIDE = 518 // the processor's working size
 const MULTIPLE = 14 // and its size divisor
 const MEAN = [0.485, 0.456, 0.406]
 const STD = [0.229, 0.224, 0.225]
 
 let sessionPromise = null
+let modelPromise = null
 
-function getSession() {
-  if (!sessionPromise) sessionPromise = InferenceSession.create(MODEL_PATH)
+// The weights ride along with the site as a static file and land in /tmp
+// once per cold instance. That keeps about 26 MB out of every function
+// bundle while visitors still download nothing, the fetch is server side.
+function ensureModel(url) {
+  if (!modelPromise) {
+    modelPromise = (async () => {
+      if (url) {
+        try {
+          if (existsSync(CACHE_PATH) && statSync(CACHE_PATH).size > 1e6) return CACHE_PATH
+          const resp = await fetch(url)
+          if (!resp.ok) throw new Error(`model fetch answered ${resp.status}`)
+          const buf = Buffer.from(await resp.arrayBuffer())
+          if (buf.length < 1e6) throw new Error('model fetch came back short')
+          await writeFile(CACHE_PATH, buf)
+          return CACHE_PATH
+        } catch (err) {
+          if (existsSync(DEFAULT_MODEL)) return DEFAULT_MODEL
+          throw err
+        }
+      }
+      return DEFAULT_MODEL
+    })()
+    modelPromise.catch(() => {
+      modelPromise = null
+    })
+  }
+  return modelPromise
+}
+
+function getSession(modelUrl) {
+  if (!sessionPromise) {
+    sessionPromise = ensureModel(modelUrl).then((modelPath) => InferenceSession.create(modelPath))
+  }
+  sessionPromise.catch(() => {
+    sessionPromise = null
+  })
   return sessionPromise
 }
 
@@ -123,7 +162,7 @@ function resample(src, sw, sh, dw, dh) {
 
 // Runs the model over raw rgb bytes and returns raw grayscale depth at the
 // same size, stretched to the full range the way the old pipeline wrote it.
-export async function runDepth(rgb, w, h) {
+export async function runDepth(rgb, w, h, modelUrl) {
   const { outW, outH } = workSize(w, h)
 
   // deinterleave to float planes at the working size
@@ -147,7 +186,7 @@ export async function runDepth(rgb, w, h) {
     }
   }
 
-  const session = await getSession()
+  const session = await getSession(modelUrl)
   const out = await session.run({ pixel_values: new Tensor('float32', chw, [1, 3, outH, outW]) })
   const depth = out.predicted_depth.data
 

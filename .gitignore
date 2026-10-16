@@ -3,3 +3,4 @@ dist
 .vercel
 .DS_Store
 *.log
+public/model.onnx
