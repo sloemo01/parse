@@ -2,7 +2,7 @@ import { VERT, FRAG } from './shaders.js'
 
 const UNIFORM_NAMES = [
   'uImage', 'uDepth', 'uDepthSoft', 'uLut', 'uAspect', 'uDirX', 'uDirY', 'uRadial',
-  'uInvert', 'uDepthMix', 'uPhoto', 'uCombine', 'uRoll', 'uRepeat', 'uWrap', 'uOffset', 'uSteps', 'uBlend', 'uViewDepth',
+  'uInvert', 'uDepthMix', 'uPhoto', 'uCombine', 'uRoll', 'uTravel', 'uRepeat', 'uWrap', 'uOffset', 'uSteps', 'uBlend', 'uViewDepth',
   'uOriginal', 'uWipe', 'uWipeDepth', 'uSoft', 'uSweepBlur',
   'uDither', 'uDitherSize', 'uDitherStyle',
 ]
@@ -97,6 +97,7 @@ export function createRenderer(canvas) {
     gl.uniform1f(U.uPhoto, state.photo)
     gl.uniform1f(U.uCombine, state.combine)
     gl.uniform1f(U.uRoll, state.roll)
+    gl.uniform1f(U.uTravel, state.travel)
     gl.uniform1f(U.uRepeat, state.repeat)
     gl.uniform1f(U.uWrap, state.wrap)
     gl.uniform1f(U.uOffset, state.offset)
