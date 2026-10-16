@@ -68,7 +68,7 @@ The sha256 for this is hand rolled in `src/lib/pow.js` and shared by the client 
 - ramp: cycles, phase, posterize steps, and a loop toggle that wraps the ramp.
 - dither: patterns the ramp just before the posterize step, so stacked colors break into ordered dots. bayer or noise, with amount and cell size. switching it on raises steps to 8 for the classic look.
 - palette: eighteen color cycles with a hue shift on top, plus a shuffle button that picks a combo for you. colorama is the default.
-- motion: scrolls the ramp over time.
+- motion: scrolls the ramp over time, in the chosen direction, and the pattern visibly travels that way while it animates. on the radial dot the rings travel outward from the middle. speed sets the pace, loop length sets how long the exported loop runs.
 - holding the photo or the pill under it shows the untouched original for as long as you hold.
 - open photo: loads any image at any size, or drop one straight on the canvas. oversized photos are scaled down to the gpu texture limit, and a fresh photo gets a quick depth estimate instantly while the small model refines it on the server.
 - tour: the button in the top bar walks every control in 42 stops, opening collapsed sections as it goes.

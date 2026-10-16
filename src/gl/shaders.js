@@ -27,6 +27,8 @@ uniform float uDepthMix;
 uniform float uPhoto;
 uniform float uCombine;
 uniform float uRoll;
+uniform float uTravel;
+uniform float uTravelOn;
 uniform float uRepeat;
 uniform float uWrap;
 uniform float uOffset;
@@ -112,8 +114,13 @@ void main() {
 
   // Rolling colors advance the ramp through the palette cycle. The roll
   // always wraps, so a finished sweep can never leave the ramp saturated
-  // into a flat color.
-  v = fract(v + uRoll);
+  // into a flat color. While animate runs in photo tones mode the motion
+  // turns into a wave: the tones still anchor every pixel, and the colour
+  // pattern itself slides across the frame in the chosen direction. The
+  // image never moves; only the palette does.
+  float flow = uTravelOn * uPhoto * (t - uTravel);
+  float cycle = (1.0 - uTravelOn * uPhoto) * uRoll;
+  v = fract(v + flow + cycle);
 
   // Dither nudges the ramp by a bayer or noise pattern just before the
   // posterize step, so band edges break up into ordered dots. uDither is
