@@ -714,9 +714,9 @@ export default function App() {
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <header className="flex items-center gap-3 border-b border-border px-4 py-2.5">
+      <header className="flex items-center gap-3 border-b border-border px-4 py-2.5 max-[620px]:flex-wrap max-[620px]:gap-2 max-[620px]:px-3">
         <h1 id="tour-brand" className="text-sm font-semibold tracking-tight">parse</h1>
-        <span className="text-xs text-muted-foreground">depth gradient colorama</span>
+        <span className="text-xs text-muted-foreground max-[620px]:hidden">depth gradient colorama</span>
         {notice ? <span className="text-xs text-destructive">{notice}</span> : null}
         {aiBusy ? <span className="text-xs text-muted-foreground">{aiBusy}</span> : null}
         <span className="flex-1" />
@@ -779,7 +779,7 @@ export default function App() {
       <main className="flex min-h-0 flex-1 max-[620px]:flex-col">
         <section className="flex min-w-0 flex-1 flex-col max-[620px]:flex-none">
           <div
-            className="relative flex min-h-0 flex-1 items-center justify-center p-4 max-[620px]:h-[430px] max-[620px]:flex-none"
+            className="relative flex min-h-0 flex-1 items-center justify-center p-4 max-[620px]:h-[52vh] max-[620px]:min-h-[300px] max-[620px]:flex-none"
             ref={stageRef}
           >
             <canvas

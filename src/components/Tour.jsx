@@ -370,7 +370,7 @@ export default function Tour({ open, onClose }) {
       )}
       <div
         className="absolute rounded-xl border border-border bg-card p-4 shadow-2xl transition-[left,top] duration-150"
-        style={{ left: cardLeft, top: cardTop, width: CARD_W }}
+        style={{ left: cardLeft, top: cardTop, width: Math.min(CARD_W, vw - 24) }}
       >
         <div className="mb-1 flex items-baseline justify-between gap-3">
           <span className="text-sm font-semibold">{s.title}</span>

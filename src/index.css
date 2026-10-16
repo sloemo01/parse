@@ -120,3 +120,50 @@
 .panel-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* Mobile and tablet pass. Once the layout stacks, the page itself has to
+   scroll, so the fixed 100% heights come off. */
+@media (max-width: 620px) {
+  html,
+  body,
+  #root {
+    height: auto;
+    min-height: 100%;
+  }
+}
+
+/* Coarse pointers get bigger targets and thicker slider chrome. */
+@media (pointer: coarse) {
+  [data-slot='slider'] {
+    padding-block: 13px;
+  }
+
+  [data-slot='slider-track'] {
+    height: 8px;
+  }
+
+  [data-slot='slider-thumb'] {
+    width: 22px;
+    height: 22px;
+  }
+
+  [data-slot='button'] {
+    min-height: 40px;
+  }
+}
+
+button,
+[role='button'],
+a,
+label,
+[data-slot='slider'] {
+  touch-action: manipulation;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
