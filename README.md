@@ -104,3 +104,7 @@ The repo is public on GitHub (sloemo01/parse) and deploys to Vercel as a static 
 - cold starts: the first depth run after the function has gone quiet takes about 6 seconds, then it is warm
 - the throttle is per warm instance, not global. A large distributed flood is Vercel's DDoS layer's job, not this function's
 - the bundled photo's depth is large model quality; uploaded photos get the small model, same family, lighter sibling
+
+## license
+
+MIT, see [LICENSE](LICENSE). The depth weights bundled in models/ are Apache 2.0, from Depth Anything V2; the bundled photo is Kaplan Art on Pexels under the Pexels license.
