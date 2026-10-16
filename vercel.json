@@ -3,7 +3,7 @@
     "api/depth.js": {
       "memory": 1024,
       "maxDuration": 60,
-      "excludeFiles": "node_modules/onnxruntime-node/bin/napi-v3/{darwin,win32}/**"
+      "excludeFiles": "node_modules/{onnxruntime-node/bin/napi-v3/{darwin,win32,linux/arm64}/**,@img/{sharp-darwin*,sharp-libvips-darwin*,sharp-win32*,sharp-libvips-win32*}/**}"
     }
   }
 }
