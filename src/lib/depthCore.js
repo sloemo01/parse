@@ -1,20 +1,26 @@
-// Depth inference without a framework: onnxruntime-node drives the quantized
-// Depth Anything V2 (small) model directly. This replaces transformers.js so
-// the function bundle drops sharp and the whole transformers stack, which is
-// about 20 MB of every deployment. The preprocessing mirrors the model's own
-// DPT image processor: shortest side to 518, the other side rounded to a
-// multiple of 14, rescale to 0..1, normalize with the ImageNet mean/std.
+// Depth inference without a framework: the quantized Depth Anything V2
+// (small) model runs on onnxruntime directly. Both the weights and the
+// runtime ride along with the site as static files and land in /tmp once
+// per cold instance, so the function bundle stays tiny while visitors still
+// download nothing (every fetch here is server side). The preprocessing
+// mirrors the model's own DPT image processor: shortest side to 518, the
+// other side rounded to a multiple of 14, rescale to 0..1, normalize with
+// the ImageNet mean/std.
 import path from 'node:path'
-import { existsSync, statSync } from 'node:fs'
+import http from 'node:http'
+import https from 'node:https'
+import { createRequire } from 'node:module'
+import { chmodSync, existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
-import { InferenceSession, Tensor } from 'onnxruntime-node'
+import { brotliDecompressSync } from 'node:zlib'
 
 const DEFAULT_MODEL = path.join(
   process.cwd(),
   'models/onnx-community/depth-anything-v2-small/onnx/model_quantized.onnx',
 )
 // Bump the v when the weights change so stale caches never linger.
-const CACHE_PATH = '/tmp/parse-depth-model-v1.onnx' 
+const CACHE_PATH = '/tmp/parse-depth-model-v1.onnx'
+const RUNTIME_DIR = `/tmp/parse-ort-${process.platform}-${process.arch}`
 const WORK_SIDE = 518 // the processor's working size
 const MULTIPLE = 14 // and its size divisor
 const MEAN = [0.485, 0.456, 0.406]
@@ -22,6 +28,39 @@ const STD = [0.229, 0.224, 0.225]
 
 let sessionPromise = null
 let modelPromise = null
+let ortPromise = null
+let runtimePromise = null
+
+// A plain download helper (node:http, not fetch): the runtime's undici has
+// thrown under the dev server, and this path only ever does simple GETs.
+function httpGet(url, redirects = 3) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url)
+    const mod = u.protocol === 'http:' ? http : https
+    const req = mod.get(u, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && redirects > 0) {
+        res.resume()
+        resolve(httpGet(new URL(res.headers.location, u).toString(), redirects - 1))
+        return
+      }
+      if (res.statusCode !== 200) {
+        res.resume()
+        reject(new Error(`download answered ${res.statusCode}`))
+        return
+      }
+      const chunks = []
+      let size = 0
+      res.on('data', (c) => {
+        chunks.push(c)
+        size += c.length
+      })
+      res.on('end', () => resolve(Buffer.concat(chunks, size)))
+      res.on('error', reject)
+    })
+    req.on('error', reject)
+    req.end()
+  })
+}
 
 // The weights ride along with the site as a static file and land in /tmp
 // once per cold instance. That keeps about 26 MB out of every function
@@ -32,10 +71,8 @@ function ensureModel(url) {
       if (url) {
         try {
           if (existsSync(CACHE_PATH) && statSync(CACHE_PATH).size > 1e6) return CACHE_PATH
-          const resp = await fetch(url)
-          if (!resp.ok) throw new Error(`model fetch answered ${resp.status}`)
-          const buf = Buffer.from(await resp.arrayBuffer())
-          if (buf.length < 1e6) throw new Error('model fetch came back short')
+          const buf = await httpGet(url)
+          if (buf.length < 1e6) throw new Error('model download came back short')
           await writeFile(CACHE_PATH, buf)
           return CACHE_PATH
         } catch (err) {
@@ -52,13 +89,88 @@ function ensureModel(url) {
   return modelPromise
 }
 
-function getSession(modelUrl) {
-  if (!sessionPromise) {
-    sessionPromise = ensureModel(modelUrl).then((modelPath) => InferenceSession.create(modelPath))
+// A tiny ustar reader: enough for the archive our own build script writes,
+// which is flat paths with no long names, links or special entries.
+function untar(buf, destDir) {
+  let off = 0
+  while (off + 512 <= buf.length) {
+    const header = buf.subarray(off, off + 512)
+    if (header.every((b) => b === 0)) break
+    const name = header.subarray(0, 100).toString('utf8').replace(/\0.*$/, '')
+    const size = parseInt(header.subarray(124, 136).toString('utf8').replace(/\0.*$/, '').trim() || '0', 8)
+    const type = String.fromCharCode(header[156])
+    off += 512
+    if (!name) break
+    const bodyStart = off
+    off += Math.ceil(size / 512) * 512
+    if (name.includes('..') || name.startsWith('/')) continue
+    if (type !== '0' && type !== '\0' && type !== '') continue
+    const target = path.join(destDir, name)
+    mkdirSync(path.dirname(target), { recursive: true })
+    writeFileSync(target, buf.subarray(bodyStart, bodyStart + size))
+    if (name.endsWith('.node') || name.includes('.so')) chmodSync(target, 0o755)
   }
-  sessionPromise.catch(() => {
-    sessionPromise = null
-  })
+}
+
+// The runtime (engine binary plus its small JS wrapper) rides the static
+// side the same way the weights do and gets unpacked per cold instance.
+function ensureRuntime(url) {
+  if (!runtimePromise) {
+    runtimePromise = (async () => {
+      const marker = path.join(RUNTIME_DIR, 'node_modules/onnxruntime-node/package.json')
+      if (existsSync(marker)) return RUNTIME_DIR
+      const packed = await httpGet(url)
+      if (packed.length < 1e5) throw new Error('runtime download came back short')
+      const tar = brotliDecompressSync(packed)
+      mkdirSync(RUNTIME_DIR, { recursive: true })
+      untar(tar, RUNTIME_DIR)
+      return RUNTIME_DIR
+    })()
+    runtimePromise.catch(() => {
+      runtimePromise = null
+    })
+  }
+  return runtimePromise
+}
+
+// On a deployment the runtime comes from the archive; local runs (tools,
+// offline scripts) fall back to the installed package. The specifier rides
+// a variable so the function tracer leaves the package out of the bundle.
+function loadORT(runtimeUrl) {
+  if (!ortPromise) {
+    ortPromise = (async () => {
+      if (runtimeUrl) {
+        try {
+          const dir = await ensureRuntime(runtimeUrl)
+          const req = createRequire(path.join(dir, 'entry.cjs'))
+          const pkg = 'onnxruntime-node'
+          return req(pkg)
+        } catch (err) {
+          // fall through to the installed copy
+        }
+      }
+      const pkg = 'onnxruntime-node'
+      return import(pkg)
+    })()
+    ortPromise.catch(() => {
+      ortPromise = null
+    })
+  }
+  return ortPromise
+}
+
+function getSession(modelUrl, runtimeUrl) {
+  if (!sessionPromise) {
+    sessionPromise = (async () => {
+      const ort = await loadORT(runtimeUrl)
+      const modelPath = await ensureModel(modelUrl)
+      const session = await ort.InferenceSession.create(modelPath)
+      return { session, ort }
+    })()
+    sessionPromise.catch(() => {
+      sessionPromise = null
+    })
+  }
   return sessionPromise
 }
 
@@ -111,8 +223,6 @@ function bilinear(src, sw, sh, dw, dh) {
 
 function resample(src, sw, sh, dw, dh) {
   const out = new Float32Array(dw * dh)
-  const scaleX = dw / sw
-  const scaleY = dh / sh
 
   function coeffs(dstSize, srcSize) {
     const scale = dstSize / srcSize
@@ -162,7 +272,7 @@ function resample(src, sw, sh, dw, dh) {
 
 // Runs the model over raw rgb bytes and returns raw grayscale depth at the
 // same size, stretched to the full range the way the old pipeline wrote it.
-export async function runDepth(rgb, w, h, modelUrl) {
+export async function runDepth(rgb, w, h, modelUrl, runtimeUrl) {
   const { outW, outH } = workSize(w, h)
 
   // deinterleave to float planes at the working size
@@ -186,8 +296,8 @@ export async function runDepth(rgb, w, h, modelUrl) {
     }
   }
 
-  const session = await getSession(modelUrl)
-  const out = await session.run({ pixel_values: new Tensor('float32', chw, [1, 3, outH, outW]) })
+  const { session, ort } = await getSession(modelUrl, runtimeUrl)
+  const out = await session.run({ pixel_values: new ort.Tensor('float32', chw, [1, 3, outH, outW]) })
   const depth = out.predicted_depth.data
 
   let lo = Infinity

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node tools/copy-model.mjs",
+    "prebuild": "node tools/copy-model.mjs && node tools/pack-runtime.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "depth": "node tools/build-depth.mjs"
