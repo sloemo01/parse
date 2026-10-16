@@ -364,16 +364,46 @@ export default function Tour({ open, onClose }) {
     <div className="fixed inset-0 z-[90]">
       <div className="absolute inset-0" onClick={onClose} />
       {rect && (
-        <div
-          className="pointer-events-none absolute rounded-xl ring-2 ring-white/70 transition-[left,top,width,height] duration-150"
-          style={{
-            left: rect.left - 6,
-            top: rect.top - 6,
-            width: rect.width + 12,
-            height: rect.height + 12,
-            boxShadow: '0 0 0 200vmax rgba(6, 6, 8, 0.6)',
-          }}
-        />
+        <>
+          {/* Four plain dim panels cut around the target, plus a ring on the
+              hole. No giant box-shadow: that stopped painting at large
+              viewports, plain rectangles never do. */}
+          <div
+            className="pointer-events-none absolute bg-[rgba(6,6,8,0.6)]"
+            style={{ left: 0, top: 0, right: 0, height: Math.max(0, rect.top - 6) }}
+          />
+          <div
+            className="pointer-events-none absolute bg-[rgba(6,6,8,0.6)]"
+            style={{ left: 0, top: rect.bottom + 6, right: 0, bottom: 0 }}
+          />
+          <div
+            className="pointer-events-none absolute bg-[rgba(6,6,8,0.6)]"
+            style={{
+              left: 0,
+              top: Math.max(0, rect.top - 6),
+              width: Math.max(0, rect.left - 6),
+              height: rect.height + 12,
+            }}
+          />
+          <div
+            className="pointer-events-none absolute bg-[rgba(6,6,8,0.6)]"
+            style={{
+              left: rect.right + 6,
+              top: Math.max(0, rect.top - 6),
+              right: 0,
+              height: rect.height + 12,
+            }}
+          />
+          <div
+            className="pointer-events-none absolute rounded-xl ring-2 ring-white/70 transition-[left,top,width,height] duration-150"
+            style={{
+              left: rect.left - 6,
+              top: rect.top - 6,
+              width: rect.width + 12,
+              height: rect.height + 12,
+            }}
+          />
+        </>
       )}
       <div
         className="absolute max-h-[72vh] overflow-y-auto rounded-xl border border-border bg-card p-4 shadow-2xl transition-[left,top] duration-150"
