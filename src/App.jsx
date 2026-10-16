@@ -13,6 +13,7 @@ import Controls from './components/Controls.jsx'
 import Tour from './components/Tour.jsx'
 import { Button, buttonVariants } from './components/ui/button.jsx'
 import { cn } from './lib/utils.js'
+import { Analytics } from '@vercel/analytics/react'
 import { DIR_VECTORS } from './components/DirectionPad.jsx'
 
 const DEFAULTS = {
@@ -864,6 +865,7 @@ export default function App() {
         />
       </main>
       <Tour open={tourOpen} onClose={() => setTourOpen(false)} />
+      <Analytics />
     </div>
   )
 }
