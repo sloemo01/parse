@@ -221,6 +221,9 @@ function bilinear(src, sw, sh, dw, dh) {
   return out
 }
 
+// The coefficients live in flat typed arrays: the per-pixel loops are the
+// hot path of every request and pair-arrays with destructuring made them
+// several times slower than they need to be on a small vCPU.
 function resample(src, sw, sh, dw, dh) {
   const out = new Float32Array(dw * dh)
 
@@ -228,22 +231,29 @@ function resample(src, sw, sh, dw, dh) {
     const scale = dstSize / srcSize
     const filterscale = scale < 1 ? 1 / scale : 1
     const support = 2 * filterscale
-    const rows = []
+    const starts = new Int32Array(dstSize)
+    const counts = new Int32Array(dstSize)
+    const idx = []
+    const wgt = []
+    let total = 0
     for (let x = 0; x < dstSize; x++) {
       const center = (x + 0.5) / scale - 0.5
       const xmin = Math.max(0, Math.ceil(center - support + 0.5))
       const xmax = Math.min(srcSize, Math.floor(center + support + 0.5))
-      const ws = []
+      starts[x] = total
       let sum = 0
       for (let i = xmin; i < xmax; i++) {
-        const wgt = bicubicWeight((i - center + 0.5) / filterscale)
-        ws.push([i, wgt])
-        sum += wgt
+        const w = bicubicWeight((i - center + 0.5) / filterscale)
+        idx.push(i)
+        wgt.push(w)
+        sum += w
+        total++
       }
-      if (sum !== 0) for (const p of ws) p[1] /= sum
-      rows.push({ xmin, ws })
+      counts[x] = total - starts[x]
+      if (sum !== 0) for (let k = starts[x]; k < total; k++) wgt[k] /= sum
     }
-    return rows
+    // weights stay f64: f32 truncation shifts the model's output at edges
+    return { starts, counts, idx: Int32Array.from(idx), wgt: Float64Array.from(wgt) }
   }
 
   const cx = coeffs(dw, sw)
@@ -252,18 +262,20 @@ function resample(src, sw, sh, dw, dh) {
   for (let y = 0; y < sh; y++) {
     const row = y * sw
     for (let x = 0; x < dw; x++) {
-      const c = cx[x]
+      const s0 = cx.starts[x]
+      const n = cx.counts[x]
       let sum = 0
-      for (const [i, wgt] of c.ws) sum += src[row + i] * wgt
+      for (let k = 0; k < n; k++) sum += src[row + cx.idx[s0 + k]] * cx.wgt[s0 + k]
       tmp[y * dw + x] = sum
     }
   }
   for (let y = 0; y < dh; y++) {
-    const c = cy[y]
+    const s0 = cy.starts[y]
+    const n = cy.counts[y]
     const row = y * dw
     for (let x = 0; x < dw; x++) {
       let sum = 0
-      for (const [i, wgt] of c.ws) sum += tmp[i * dw + x] * wgt
+      for (let k = 0; k < n; k++) sum += tmp[cy.idx[s0 + k] * dw + x] * cy.wgt[s0 + k]
       out[row + x] = sum
     }
   }
