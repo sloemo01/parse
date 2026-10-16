@@ -305,7 +305,8 @@ export default function Tour({ open, onClose }) {
       }
       if (!alive) return
       const el = document.querySelector(anchor)
-      if (el && s.scroll !== false) {
+      const narrow = window.innerWidth < 620
+      if (el && (s.scroll !== false || narrow)) {
         el.scrollIntoView({ block: 'center' })
         await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
       }
@@ -341,6 +342,7 @@ export default function Tour({ open, onClose }) {
   // right next to it, a moving tooltip that follows the spotlight.
   const vw = window.innerWidth
   const vh = window.innerHeight
+  const narrow = vw < 620
   const panelEl = document.getElementById('tour-panel')
   const panelRect = panelEl ? panelEl.getBoundingClientRect() : null
   let cardLeft = panelRect ? Math.max(12, panelRect.left - CARD_W - 14) : 20
@@ -352,6 +354,11 @@ export default function Tour({ open, onClose }) {
   } else if (rect) {
     cardTop = Math.max(16, Math.min(vh - CARD_H - 16, rect.top + rect.height / 2 - CARD_H / 2))
   }
+  // Phones get a bottom sheet: full width, thumb height, never covering the
+  // spotlight above it. Tablets and desktops keep the side placement.
+  const cardStyle = narrow
+    ? { left: 12, right: 12, bottom: 12, width: 'auto' }
+    : { left: cardLeft, top: cardTop, width: Math.min(CARD_W, vw - 24) }
 
   return (
     <div className="fixed inset-0 z-[90]">
@@ -369,8 +376,8 @@ export default function Tour({ open, onClose }) {
         />
       )}
       <div
-        className="absolute rounded-xl border border-border bg-card p-4 shadow-2xl transition-[left,top] duration-150"
-        style={{ left: cardLeft, top: cardTop, width: Math.min(CARD_W, vw - 24) }}
+        className="absolute max-h-[72vh] overflow-y-auto rounded-xl border border-border bg-card p-4 shadow-2xl transition-[left,top] duration-150"
+        style={cardStyle}
       >
         <div className="mb-1 flex items-baseline justify-between gap-3">
           <span className="text-sm font-semibold">{s.title}</span>
